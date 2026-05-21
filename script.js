@@ -393,6 +393,11 @@ function withPdfPage(url, page) {
   return `${clean}#page=${Number(page)}`;
 }
 
+function getInSitePdfViewerUrl(pdfUrl) {
+  if (!pdfUrl) return "";
+  return `/pdf-viewer.html?src=${encodeURIComponent(pdfUrl)}`;
+}
+
 function weekToPdfPage(weekIndex, weekText) {
   if (weekIndex === 0) return 1;
   if (weekIndex === 1) return 38;
@@ -570,7 +575,7 @@ ebookReaderBody.addEventListener("click", event => {
   if (!btn) return;
   const url = btn.getAttribute("data-open-pdf-self");
   if (!url) return;
-  window.location.href = url;
+  window.location.href = getInSitePdfViewerUrl(url);
 });
 
 adminLoginForm.addEventListener("submit", event => {
