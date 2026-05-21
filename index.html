@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>禾书房 | 读书会</title>
   <meta name="description" content="禾书房读书会，提供当月在读、读者书摘、社群活动、我的读书和管理员用户查看功能。" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=20260521a" />
 </head>
 <body>
   <header class="site-header">
@@ -21,6 +21,7 @@
       <a href="#excerpts">读者书摘</a>
       <a href="#events">社群活动</a>
       <a href="#mine">我的读书</a>
+      <a href="#admin">管理员后台</a>
     </nav>
   </header>
 
@@ -33,15 +34,6 @@
         <div class="hero-actions">
           <a class="button primary" href="#mine">查看我的读书</a>
           <a class="button secondary" href="#excerpts">发表书摘</a>
-        </div>
-      </div>
-      <div class="hero-art" aria-label="书本与阅读进度视觉">
-        <div class="book book-a"><span>当月在读</span></div>
-        <div class="book book-b"><span>读者书摘</span></div>
-        <div class="book book-c"><span>社群活动</span></div>
-        <div class="progress-orbit">
-          <strong>68%</strong>
-          <span>共读进度</span>
         </div>
       </div>
     </section>
@@ -134,7 +126,18 @@
       </div>
     </section>
 
-    <section class="section" id="mine" aria-labelledby="mine-title">
+    <section class="section mine-section" id="mine" aria-labelledby="mine-title">
+      <div class="mine-drawer-top">
+        <strong>我的读书</strong>
+        <button type="button" class="button secondary mine-close-btn" id="mine-close-btn">关闭</button>
+      </div>
+      <div class="mine-submenu" id="mine-submenu">
+        <button type="button" class="button secondary" data-mine-pane="overview">概览</button>
+        <button type="button" class="button secondary" data-mine-pane="medal">勋章</button>
+        <button type="button" class="button secondary" data-mine-pane="finished">已读</button>
+        <button type="button" class="button secondary" data-mine-pane="notes">书摘</button>
+        <button type="button" class="button secondary" data-mine-pane="comments">评论</button>
+      </div>
       <div class="section-head">
         <p class="eyebrow">My Reading</p>
         <h2 id="mine-title">我的读书</h2>
@@ -146,6 +149,16 @@
     </section>
 
     <section class="section admin-section" id="admin" aria-labelledby="admin-title">
+      <div class="admin-drawer-top">
+        <strong>管理员后台</strong>
+        <button type="button" class="button secondary admin-close-btn" id="admin-close-btn">关闭</button>
+      </div>
+      <div class="admin-submenu" id="admin-submenu">
+        <button type="button" class="button secondary" data-admin-pane="login">验证</button>
+        <button type="button" class="button secondary" data-admin-pane="upload">上传电子书</button>
+        <button type="button" class="button secondary" data-admin-pane="plan">读书计划</button>
+        <button type="button" class="button secondary" data-admin-pane="users">用户信息</button>
+      </div>
       <div class="section-head">
         <p class="eyebrow">Admin</p>
         <h2 id="admin-title">管理员后台</h2>
@@ -270,6 +283,6 @@
   </template>
 
   <script src="supabase-config.js?v=20260520b"></script>
-  <script src="script.js?v=20260520e"></script>
+  <script src="script.js?v=20260521a"></script>
 </body>
 </html>
