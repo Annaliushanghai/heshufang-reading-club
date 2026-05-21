@@ -36,7 +36,7 @@
     </a>
     <nav class="main-nav" aria-label="主页菜单栏">
       <a href="#monthly">当月在读</a>
-      <a href="#excerpts">读者书摘</a>
+      <a href="#excerpts">发表笔记</a>
       <a href="#events">社群活动</a>
       <a href="#mine">我的读书</a>
       <a href="#admin">管理员后台</a>
@@ -48,19 +48,14 @@
       <div class="hero-copy">
         <p class="eyebrow">Blue Green Reading Space</p>
         <h1>在禾书房，慢慢读完一本书。</h1>
-        <p>每月一本共读书，沉淀书摘、评论和读书进度。无需登录即可阅读电子书、发表评论和浏览读书详情。</p>
-        <div class="hero-actions">
-          <a class="button primary" href="#mine">查看我的读书</a>
-          <a class="button secondary" href="#excerpts">发表书摘</a>
-        </div>
       </div>
     </section>
+
 
     <section class="section" id="monthly" aria-labelledby="monthly-title">
       <div class="section-head">
         <p class="eyebrow">Current Reading</p>
         <h2 id="monthly-title">当月在读</h2>
-        <p>本月共读书目与讨论节奏。</p>
       </div>
       <div class="monthly-layout">
         <article class="current-book" id="current-book"></article>
@@ -95,12 +90,11 @@
     <section class="section" id="excerpts" aria-labelledby="excerpts-title">
       <div class="section-head">
         <p class="eyebrow">Reader Notes</p>
-        <h2 id="excerpts-title">读者书摘</h2>
-        <p>浏览者可以发表文章，文章下也可以继续评论。</p>
+        <h2 id="excerpts-title">发表笔记</h2>
       </div>
       <div class="excerpt-layout">
         <form class="panel editor-panel" id="excerpt-form">
-          <h3>发表文章</h3>
+          <h3>发表笔记</h3>
           <label>
             昵称
             <input name="author" type="text" placeholder="例如：青禾" required />
@@ -113,7 +107,7 @@
             正文
             <textarea name="body" rows="7" placeholder="摘录句子、阅读感受或想讨论的问题" required></textarea>
           </label>
-          <button class="button primary" type="submit">发布文章</button>
+          <button class="button primary" type="submit">发表笔记</button>
         </form>
         <div class="article-list" id="article-list" aria-live="polite"></div>
       </div>
@@ -123,7 +117,6 @@
       <div class="section-head">
         <p class="eyebrow">Community</p>
         <h2 id="events-title">社群活动</h2>
-        <p>线上共读与线下分享结合，保持轻量、持续的阅读陪伴。</p>
       </div>
       <div class="event-grid">
         <article class="event-card">
