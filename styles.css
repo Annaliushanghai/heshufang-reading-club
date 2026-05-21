@@ -363,12 +363,32 @@ main {
   min-height: 420px;
 }
 
-.ebook-frame {
+.ebook-pdf-wrap {
   width: 100%;
   min-height: 560px;
+  max-height: 75vh;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: #fff;
+}
+
+.ebook-frame {
+  width: 100%;
+  min-height: 560px;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+}
+
+.ebook-pdf-embed {
+  display: block;
+}
+
+.ebook-pdf-empty {
+  display: grid;
+  place-items: start;
 }
 
 .reader-open-link {
@@ -431,6 +451,12 @@ main {
   border-radius: 6px;
   padding: 18px;
   background: #f5fbfa;
+}
+
+.reader-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .current-book,
@@ -1284,5 +1310,12 @@ th {
   .medal-list,
   .detail-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .ebook-pdf-wrap {
+    min-height: 68vh;
+    max-height: 78vh;
   }
 }
