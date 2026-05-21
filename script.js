@@ -250,8 +250,12 @@ function applyCloudState(state) {
     localStorage.setItem(USER_KEY, JSON.stringify(users));
   }
   if (Array.isArray(state.ebooks)) {
-    ebooks = state.ebooks;
-    localStorage.setItem(EBOOK_KEY, JSON.stringify(ebooks));
+    const localNewest = (ebooks || []).reduce((max, item) => Math.max(max, Date.parse(item?.createdAt || 0) || 0), 0);
+    const cloudNewest = state.ebooks.reduce((max, item) => Math.max(max, Date.parse(item?.createdAt || 0) || 0), 0);
+    if (cloudNewest >= localNewest) {
+      ebooks = state.ebooks;
+      localStorage.setItem(EBOOK_KEY, JSON.stringify(ebooks));
+    }
   }
   if (state.readingPlan && typeof state.readingPlan === "object") {
     readingPlan = state.readingPlan;
@@ -570,14 +574,36 @@ async function openEbookReader(ebookId) {
     ebookReaderBody.querySelector("pre").textContent = await readEbookText(ebook);
   } else if (ebook.type === "application/pdf" || extension === "pdf") {
     if (ebook.dataUrl) currentReaderBlobUrl = dataUrlToBlobUrl(ebook.dataUrl);
-    const frameUrl = currentReaderBlobUrl || sourceUrl;
-    if (!ebook.dataUrl) currentReaderBlobUrl = sourceUrl;
+    const frameUrl = sourceUrl || currentReaderBlobUrl;
+    if (!ebook.dataUrl && sourceUrl) currentReaderBlobUrl = sourceUrl;
     ebookReaderBody.innerHTML = `
       <p class="reader-tip">如果下方 PDF 区域空白，请点击“新窗口打开 PDF”。</p>
       <iframe class="ebook-frame" title="${escapeHtml(displayTitle)}"></iframe>
-      <a class="button secondary reader-open-link" href="${ebook.dataUrl}" target="_blank" rel="noopener noreferrer">新窗口打开 PDF</a>
+      <a class="button secondary reader-open-link" href="${frameUrl || "#"}" target="_blank" rel="noopener noreferrer">新窗口打开 PDF</a>
     `;
-    ebookReaderBody.querySelector("iframe")?.setAttribute("src", currentReaderBlobUrl);
+    const frame = ebookReaderBody.querySelector("iframe");
+    const openLink = ebookReaderBody.querySelector(".reader-open-link");
+    if (openLink && frameUrl) openLink.setAttribute("href", frameUrl);
+    if (frameUrl) {
+      frame?.setAttribute("src", frameUrl);
+    } else {
+      frame?.setAttribute("srcdoc", "<p style='padding:12px'>PDF 未找到，请重新上传。</p>");
+    }
+    const urlWrap = document.createElement("div");
+    urlWrap.className = "reader-url-wrap";
+    const label = document.createElement("label");
+    label.textContent = "PDF 直链";
+    const input = document.createElement("input");
+    input.className = "reader-url-input";
+    input.type = "text";
+    input.readOnly = true;
+    input.value = frameUrl || "";
+    input.addEventListener("click", () => {
+      input.select();
+      navigator.clipboard?.writeText(input.value).catch(() => {});
+    });
+    urlWrap.append(label, input);
+    ebookReaderBody.append(urlWrap);
   } else if (ebook.type === "text/html" || ["html", "htm"].includes(extension)) {
     ebookReaderBody.innerHTML = `<iframe class="ebook-frame" title="${escapeHtml(displayTitle)}"></iframe>`;
     ebookReaderBody.querySelector("iframe").src = sourceUrl;
@@ -588,7 +614,7 @@ async function openEbookReader(ebookId) {
       <div class="reader-fallback">
         <strong>此格式无法在浏览器内直接预览</strong>
         <p>已加载管理员上传的电子书文件：${escapeHtml(ebook.fileName)}。可以点击下方按钮打开或下载。</p>
-        <a class="button secondary" href="${ebook.dataUrl}" target="_blank" rel="noopener noreferrer">打开文件</a>
+        <a class="button secondary" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">打开文件</a>
       </div>
     `;
   }
