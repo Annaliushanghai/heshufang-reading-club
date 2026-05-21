@@ -283,6 +283,14 @@ main {
   padding: 20px;
 }
 
+#monthly-ebook-panel {
+  display: none;
+}
+
+body.subpage-monthly #monthly-ebook-panel {
+  display: grid;
+}
+
 .panel-head,
 .ebook-item {
   display: flex;
