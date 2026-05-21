@@ -97,12 +97,19 @@ a {
 
 .main-nav {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   gap: clamp(12px, 2.8vw, 30px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.main-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .main-nav a {
+  flex: 0 0 auto;
   color: var(--muted);
   font-size: 15px;
   font-weight: 800;
@@ -683,7 +690,7 @@ textarea {
 }
 
 .article-card {
-  padding: 20px;
+  padding: 16px;
 }
 
 .article-meta {
@@ -700,26 +707,28 @@ textarea {
 }
 
 .comment-box {
-  margin-top: 18px;
-  padding-top: 16px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid var(--line);
 }
 
 .comment-box h4 {
-  margin: 0 0 10px;
+  margin: 0 0 6px;
+  font-size: 18px;
 }
 
 .comment-list {
   display: grid;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 
 .comment-item {
   margin: 0;
   border-left: 3px solid var(--mint);
   border-radius: 0 6px 6px 0;
-  padding: 9px 12px;
+  padding: 7px 10px;
+  line-height: 1.45;
   background: #f2fbfa;
 }
 
@@ -730,11 +739,31 @@ textarea {
 .comment-form {
   display: grid;
   grid-template-columns: 130px minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: 8px;
+  align-items: center;
+}
+
+.comment-form input,
+.comment-form button {
+  height: 42px;
+}
+
+.comment-form input {
+  padding-block: 8px;
 }
 
 .event-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+#monthly-ebook-panel .panel-head > div > p {
+  display: none;
+}
+
+#monthly-ebook-panel .ebook-item span,
+#monthly-ebook-panel .reader-note,
+#monthly-ebook-panel .reader-tip {
+  display: none;
 }
 
 .event-card {
@@ -1279,6 +1308,12 @@ th {
 
   .comment-form {
     grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .comment-form input,
+  .comment-form button {
+    height: 40px;
   }
 }
 
@@ -1314,6 +1349,39 @@ th {
 }
 
 @media (max-width: 768px) {
+  #monthly-ebook-panel .panel-head {
+    align-items: flex-start;
+  }
+
+  #monthly-ebook-panel .ebook-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  #monthly-ebook-panel .ebook-item .button.secondary {
+    align-self: flex-start;
+    min-width: 0;
+    width: auto;
+    padding: 7px 12px;
+    font-size: 15px;
+    line-height: 1.2;
+  }
+
+  #monthly-ebook-panel .reader-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  #monthly-ebook-panel #ebook-reader-close {
+    min-width: 0;
+    width: auto;
+    padding: 7px 12px;
+    font-size: 15px;
+    line-height: 1.2;
+  }
+
   .ebook-pdf-wrap {
     min-height: 68vh;
     max-height: 78vh;
