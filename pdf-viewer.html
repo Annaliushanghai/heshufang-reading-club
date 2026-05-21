@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>禾书房 | PDF阅读</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #eef6f6;
+      color: #0b2b2d;
+    }
+    .bar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(238, 246, 246, 0.96);
+      border-bottom: 1px solid #bdd6d6;
+      backdrop-filter: blur(6px);
+    }
+    .btn {
+      border: 1px solid #1f7e80;
+      background: #fff;
+      color: #135a5c;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .title {
+      font-size: 15px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .wrap {
+      height: calc(100vh - 56px);
+      padding: 8px;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: 1px solid #bdd6d6;
+      border-radius: 8px;
+      background: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <button class="btn" type="button" id="backBtn">返回主页</button>
+    <div class="title">微信内PDF阅读</div>
+  </div>
+  <div class="wrap">
+    <iframe id="pdfFrame" title="PDF阅读器" loading="eager"></iframe>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const src = params.get("src") || "";
+    const frame = document.getElementById("pdfFrame");
+    if (src) frame.src = src;
+    document.getElementById("backBtn").addEventListener("click", () => {
+      location.href = "/index.html#monthly";
+    });
+  </script>
+</body>
+</html>
