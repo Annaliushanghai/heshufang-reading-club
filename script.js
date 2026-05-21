@@ -3,6 +3,8 @@ const USER_KEY = "heBookroomUsersV2";
 const EBOOK_KEY = "heBookroomEbooksV1";
 const READING_PLAN_KEY = "heBookroomReadingPlanV1";
 const ACTIVITY_KEY = "heBookroomActivitiesV1";
+const APP_BUILD = "20260521-rootfix2";
+const APP_BUILD_KEY = "__hsf_app_build__";
 const ADMIN_PASSCODE = "heshufang-admin";
 const SUPABASE_CONFIG = window.HE_SHUFANG_SUPABASE || { url: "", anonKey: "" };
 const SUPABASE_STATE_TABLE = "heshufang_state";
@@ -13,6 +15,26 @@ const cloudEnabled = Boolean(SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey);
 const hasSupabaseUrl = Boolean(SUPABASE_CONFIG.url);
 let cloudSyncTimer = null;
 let cloudSyncing = false;
+
+function resetLocalStateOnBuildChange() {
+  try {
+    const lastBuild = localStorage.getItem(APP_BUILD_KEY) || "";
+    if (lastBuild === APP_BUILD) return;
+    [
+      ARTICLE_KEY,
+      USER_KEY,
+      EBOOK_KEY,
+      READING_PLAN_KEY,
+      ACTIVITY_KEY,
+      "__hsf_build__"
+    ].forEach(key => localStorage.removeItem(key));
+    localStorage.setItem(APP_BUILD_KEY, APP_BUILD);
+  } catch {
+    // ignore storage errors
+  }
+}
+
+resetLocalStateOnBuildChange();
 
 const starterArticles = [
   {
@@ -245,6 +267,7 @@ async function uploadToStorage(file, folder = "ebooks") {
 
 function getCurrentState() {
   return {
+    appBuild: APP_BUILD,
     articles,
     users,
     ebooks,
@@ -304,6 +327,7 @@ function queueCloudSync() {
 
 function applyCloudState(state) {
   if (!state || typeof state !== "object") return;
+  if (state.appBuild && state.appBuild !== APP_BUILD) return;
   if (Array.isArray(state.articles)) {
     articles = state.articles;
     localStorage.setItem(ARTICLE_KEY, JSON.stringify(articles));
@@ -372,6 +396,11 @@ function formatDate(value) {
     month: "short",
     day: "numeric"
   }).format(new Date(value));
+}
+
+function isMobileLike() {
+  const ua = navigator.userAgent || "";
+  return /Android|iPhone|iPad|iPod|Mobile|MicroMessenger/i.test(ua);
 }
 
 function saveActivities() {
@@ -686,18 +715,23 @@ async function openEbookReader(ebookId) {
     if (ebook.dataUrl) currentReaderBlobUrl = dataUrlToBlobUrl(ebook.dataUrl);
     const frameUrl = sourceUrl || currentReaderBlobUrl;
     if (!ebook.dataUrl && sourceUrl) currentReaderBlobUrl = sourceUrl;
+    const mobileLike = isMobileLike();
     ebookReaderBody.innerHTML = `
       <p class="reader-tip">如果下方 PDF 区域空白，请点击“新窗口打开 PDF”。</p>
-      <iframe class="ebook-frame" title="${escapeHtml(displayTitle)}"></iframe>
+      <div class="ebook-pdf-wrap"></div>
       <a class="button secondary reader-open-link" href="${frameUrl || "#"}" target="_blank" rel="noopener noreferrer">新窗口打开 PDF</a>
     `;
-    const frame = ebookReaderBody.querySelector("iframe");
+    const pdfWrap = ebookReaderBody.querySelector(".ebook-pdf-wrap");
     const openLink = ebookReaderBody.querySelector(".reader-open-link");
     if (openLink && frameUrl) openLink.setAttribute("href", frameUrl);
-    if (frameUrl) {
-      frame?.setAttribute("src", frameUrl);
+    if (frameUrl && pdfWrap) {
+      if (mobileLike) {
+        pdfWrap.innerHTML = `<embed class="ebook-frame ebook-pdf-embed" src="${frameUrl}#view=FitH" type="application/pdf" />`;
+      } else {
+        pdfWrap.innerHTML = `<iframe class="ebook-frame" title="${escapeHtml(displayTitle)}" src="${frameUrl}"></iframe>`;
+      }
     } else {
-      frame?.setAttribute("srcdoc", "<p style='padding:12px'>PDF 未找到，请重新上传。</p>");
+      pdfWrap.innerHTML = "<div class='ebook-frame ebook-pdf-empty'><p style='padding:12px'>PDF 未找到，请重新上传。</p></div>";
     }
     const urlWrap = document.createElement("div");
     urlWrap.className = "reader-url-wrap";
