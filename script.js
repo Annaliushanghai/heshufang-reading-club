@@ -161,8 +161,15 @@ function renderActivities() {
 }
 
 function renderReadingPlan() {
+  const currentEbook = ebooks[0];
+  const coverUrl = currentEbook?.coverUrl || "";
+  const coverTitle = currentEbook?.title || readingPlan.title;
+  const coverHtml = coverUrl
+    ? `<div class="cover image-cover"><img src="${coverUrl}" alt="${escapeHtml(coverTitle)}封面" /></div>`
+    : `<div class="cover">${formatCoverText(readingPlan.coverText)}</div>`;
+
   currentBook.innerHTML = `
-    <div class="cover">${formatCoverText(readingPlan.coverText)}</div>
+    ${coverHtml}
     <div>
       <span class="tag">${escapeHtml(readingPlan.label)}</span>
       <h3>${escapeHtml(readingPlan.title)}</h3>
