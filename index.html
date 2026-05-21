@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
@@ -21,48 +21,67 @@
       } catch (e) {}
     })();
   </script>
-  <title>禾书房 | 读书会</title>
-  <meta name="description" content="禾书房读书会，提供当月在读、读者书摘、社群活动、我的读书和管理员用户查看功能。" />
+  <title>绂句功鎴?| 璇讳功浼?/title>
+  <meta name="description" content="绂句功鎴胯涔︿細锛屾彁渚涘綋鏈堝湪璇汇€佽鑰呬功鎽樸€佺ぞ缇ゆ椿鍔ㄣ€佹垜鐨勮涔﹀拰绠＄悊鍛樼敤鎴锋煡鐪嬪姛鑳姐€? />
   <link rel="stylesheet" href="styles.css?v=20260521-rootfix2" />
 </head>
 <body>
   <header class="site-header">
-    <a class="brand" href="#home" aria-label="禾书房首页">
-      <span class="brand-mark">禾</span>
+    <a class="brand" href="#home" aria-label="绂句功鎴块椤?>
+      <span class="brand-mark">绂?/span>
       <span>
-        <strong>禾书房</strong>
+        <strong>绂句功鎴?/strong>
         <small>Reading Club</small>
       </span>
     </a>
-    <nav class="main-nav" aria-label="主页菜单栏">
-      <a href="#monthly">当月在读</a>
-      <a href="#excerpts">发表笔记</a>
-      <a href="#events">社群活动</a>
-      <a href="#mine">我的读书</a>
-      <a href="#admin">管理员后台</a>
+    <nav class="main-nav" aria-label="涓婚〉鑿滃崟鏍?>
+      <a href="#monthly">褰撴湀鍦ㄨ</a>
+      <a href="#excerpts">鍙戣〃绗旇</a>
+      <a href="#events">绀剧兢娲诲姩</a>
+      <a href="#mine">鎴戠殑璇讳功</a>
+      <a href="#admin">绠＄悊鍛樺悗鍙?/a>
     </nav>
   </header>
 
   <main id="home">
     <section class="hero">
       <div class="hero-copy">
-        <p class="eyebrow">Blue Green Reading Space</p>
-        <h1>在禾书房，慢慢读完一本书。</h1>
+        <p class="eyebrow">HE READING CLUB</p>
+        <h1>鍦ㄧ涔︽埧锛屾參鎱㈣瀹屼竴鏈功銆?/h1>
       </div>
     </section>
 
 
+    <div class="ebook-panel panel" id="monthly-ebook-panel">
+      <div class="panel-head">
+        <div>
+          <h3>瑜版挻婀€閻㈤潧鐡欐稊?/h3>
+          <p>閻愮懓鍤幍鎾崇磻闂冨懓顕伴敍灞藉讲閸︺劋绗呴弬瑙勭叀閻顓搁悶鍡楁喅娑撳﹣绱堕惃鍕躬鐠囪崵鏁哥€涙劒鍔熼妴?/p>
+        </div>
+        <span class="tag" id="ebook-access-status">閸欘垳娲块幒銉╂鐠?/span>
+      </div>
+      <div class="ebook-list" id="monthly-ebook-list" aria-live="polite"></div>
+      <div class="ebook-reader" id="ebook-reader" hidden>
+        <div class="reader-head">
+          <h3 id="ebook-reader-title">閻㈤潧鐡欐稊锕傛鐠?/h3>
+          <button class="button secondary" type="button" id="ebook-reader-close">閸忔娊妫撮梼鍛邦嚢</button>
+        </div>
+        <p class="reader-note">娑撳鏌熼弰鍓с仛缁狅紕鎮婇崨妯圭瑐娴肩姷娈戦悽闈涚摍娑旓附鏋冨锝冣偓?/p>
+        <div class="ebook-reader-body" id="ebook-reader-body"></div>
+      </div>
+    </div>
+
     <section class="section" id="monthly" aria-labelledby="monthly-title">
       <div class="section-head">
         <p class="eyebrow">Current Reading</p>
-        <h2 id="monthly-title">当月在读</h2>
+        <h2 id="monthly-title">褰撴湀鍦ㄨ</h2>
       </div>
       <div class="monthly-layout">
         <article class="current-book" id="current-book"></article>
         <aside class="reading-activity" aria-labelledby="activity-title">
           <div class="activity-head">
-            <h3 id="activity-title">最新读书动态</h3>
-            <span>本周</span>
+            <h3 id="activity-title">鏈€鏂拌涔﹀姩鎬?/h3>
+            <span>鏈懆</span>
           </div>
           <div class="activity-list" id="activity-list" aria-live="polite"></div>
         </aside>
@@ -70,18 +89,18 @@
       <div class="ebook-panel panel" id="monthly-ebook-panel">
         <div class="panel-head">
           <div>
-            <h3>当月电子书</h3>
-            <p>点击打开阅读，可在下方查看管理员上传的在读电子书。</p>
+            <h3>褰撴湀鐢靛瓙涔?/h3>
+            <p>鐐瑰嚮鎵撳紑闃呰锛屽彲鍦ㄤ笅鏂规煡鐪嬬鐞嗗憳涓婁紶鐨勫湪璇荤數瀛愪功銆?/p>
           </div>
-          <span class="tag" id="ebook-access-status">可直接阅读</span>
+          <span class="tag" id="ebook-access-status">鍙洿鎺ラ槄璇?/span>
         </div>
         <div class="ebook-list" id="monthly-ebook-list" aria-live="polite"></div>
         <div class="ebook-reader" id="ebook-reader" hidden>
           <div class="reader-head">
-            <h3 id="ebook-reader-title">电子书阅读</h3>
-            <button class="button secondary" type="button" id="ebook-reader-close">关闭阅读</button>
+            <h3 id="ebook-reader-title">鐢靛瓙涔﹂槄璇?/h3>
+            <button class="button secondary" type="button" id="ebook-reader-close">鍏抽棴闃呰</button>
           </div>
-          <p class="reader-note">下方显示管理员上传的电子书文档。</p>
+          <p class="reader-note">涓嬫柟鏄剧ず绠＄悊鍛樹笂浼犵殑鐢靛瓙涔︽枃妗ｃ€?/p>
           <div class="ebook-reader-body" id="ebook-reader-body"></div>
         </div>
       </div>
@@ -90,24 +109,24 @@
     <section class="section" id="excerpts" aria-labelledby="excerpts-title">
       <div class="section-head">
         <p class="eyebrow">Reader Notes</p>
-        <h2 id="excerpts-title">发表笔记</h2>
+        <h2 id="excerpts-title">鍙戣〃绗旇</h2>
       </div>
       <div class="excerpt-layout">
         <form class="panel editor-panel" id="excerpt-form">
-          <h3>发表笔记</h3>
+          <h3>鍙戣〃绗旇</h3>
           <label>
-            昵称
-            <input name="author" type="text" placeholder="例如：青禾" required />
+            鏄电О
+            <input name="author" type="text" placeholder="渚嬪锛氶潚绂? required />
           </label>
           <label>
-            标题
-            <input name="title" type="text" placeholder="写下这篇书摘的标题" required />
+            鏍囬
+            <input name="title" type="text" placeholder="鍐欎笅杩欑瘒涔︽憳鐨勬爣棰? required />
           </label>
           <label>
-            正文
-            <textarea name="body" rows="7" placeholder="摘录句子、阅读感受或想讨论的问题" required></textarea>
+            姝ｆ枃
+            <textarea name="body" rows="7" placeholder="鎽樺綍鍙ュ瓙銆侀槄璇绘劅鍙楁垨鎯宠璁虹殑闂" required></textarea>
           </label>
-          <button class="button primary" type="submit">发表笔记</button>
+          <button class="button primary" type="submit">鍙戣〃绗旇</button>
         </form>
         <div class="article-list" id="article-list" aria-live="polite"></div>
       </div>
@@ -116,43 +135,43 @@
     <section class="section" id="events" aria-labelledby="events-title">
       <div class="section-head">
         <p class="eyebrow">Community</p>
-        <h2 id="events-title">社群活动</h2>
+        <h2 id="events-title">绀剧兢娲诲姩</h2>
       </div>
       <div class="event-grid">
         <article class="event-card">
-          <time>线上社群</time>
-          <h3>每周五晚 微信群读书心得分享</h3>
-          <p>欢迎在微信群交流本周阅读心得、问题与建议，轻松共读，持续陪伴。</p>
+          <time>绾夸笂绀剧兢</time>
+          <h3>姣忓懆浜旀櫄 寰俊缇よ涔﹀績寰楀垎浜?/h3>
+          <p>娆㈣繋鍦ㄥ井淇＄兢浜ゆ祦鏈懆闃呰蹇冨緱銆侀棶棰樹笌寤鸿锛岃交鏉惧叡璇伙紝鎸佺画闄即銆?/p>
         </article>
         <article class="event-card">
-          <time>线下活动</time>
-          <h3>每月第四个周日晚，见面聊</h3>
-          <p>围绕当月共读主题线下交流，聊阅读、聊生活观察，也聊你喜欢的句子。</p>
+          <time>绾夸笅娲诲姩</time>
+          <h3>姣忔湀绗洓涓懆鏃ユ櫄锛岃闈㈣亰</h3>
+          <p>鍥寸粫褰撴湀鍏辫涓婚绾夸笅浜ゆ祦锛岃亰闃呰銆佽亰鐢熸椿瑙傚療锛屼篃鑱婁綘鍠滄鐨勫彞瀛愩€?/p>
         </article>
         <article class="event-card">
-          <time>加入我们</time>
-          <h3>电话：13482202207（同微信）</h3>
-          <p>线下地址：上海市黄浦区南苏州路1295号107室 禾鱼艺术工作室（地铁1号线新闸路1号出口步行10分钟）。</p>
+          <time>鍔犲叆鎴戜滑</time>
+          <h3>鐢佃瘽锛?3482202207锛堝悓寰俊锛?/h3>
+          <p>绾夸笅鍦板潃锛氫笂娴峰競榛勬郸鍖哄崡鑻忓窞璺?295鍙?07瀹?绂鹃奔鑹烘湳宸ヤ綔瀹わ紙鍦伴搧1鍙风嚎鏂伴椄璺?鍙峰嚭鍙ｆ琛?0鍒嗛挓锛夈€?/p>
         </article>
       </div>
     </section>
 
     <section class="section mine-section" id="mine" aria-labelledby="mine-title">
       <div class="mine-drawer-top">
-        <strong>我的读书</strong>
-        <button type="button" class="button secondary mine-close-btn" id="mine-close-btn">关闭</button>
+        <strong>鎴戠殑璇讳功</strong>
+        <button type="button" class="button secondary mine-close-btn" id="mine-close-btn">鍏抽棴</button>
       </div>
       <div class="mine-submenu" id="mine-submenu">
-        <button type="button" class="button secondary" data-mine-pane="overview">概览</button>
-        <button type="button" class="button secondary" data-mine-pane="medal">勋章</button>
-        <button type="button" class="button secondary" data-mine-pane="finished">已读</button>
-        <button type="button" class="button secondary" data-mine-pane="notes">书摘</button>
-        <button type="button" class="button secondary" data-mine-pane="comments">评论</button>
+        <button type="button" class="button secondary" data-mine-pane="overview">姒傝</button>
+        <button type="button" class="button secondary" data-mine-pane="medal">鍕嬬珷</button>
+        <button type="button" class="button secondary" data-mine-pane="finished">宸茶</button>
+        <button type="button" class="button secondary" data-mine-pane="notes">涔︽憳</button>
+        <button type="button" class="button secondary" data-mine-pane="comments">璇勮</button>
       </div>
       <div class="section-head">
         <p class="eyebrow">My Reading</p>
-        <h2 id="mine-title">我的读书</h2>
-        <p>无需登录，直接查看读书进度、勋章、已读、书摘与评论。</p>
+        <h2 id="mine-title">鎴戠殑璇讳功</h2>
+        <p>鏃犻渶鐧诲綍锛岀洿鎺ユ煡鐪嬭涔﹁繘搴︺€佸媼绔犮€佸凡璇汇€佷功鎽樹笌璇勮銆?/p>
       </div>
       <div class="mine-layout">
         <div class="panel reading-detail" id="reading-detail"></div>
@@ -161,116 +180,118 @@
 
     <section class="section admin-section" id="admin" aria-labelledby="admin-title">
       <div class="admin-drawer-top">
-        <strong>管理员后台</strong>
-        <button type="button" class="button secondary admin-close-btn" id="admin-close-btn">关闭</button>
+        <strong>绠＄悊鍛樺悗鍙?/strong>
+        <button type="button" class="button secondary admin-close-btn" id="admin-close-btn">鍏抽棴</button>
       </div>
       <div class="admin-submenu" id="admin-submenu">
-        <button type="button" class="button secondary" data-admin-pane="login">验证</button>
-        <button type="button" class="button secondary" data-admin-pane="upload">上传电子书</button>
-        <button type="button" class="button secondary" data-admin-pane="plan">读书计划</button>
-        <button type="button" class="button secondary" data-admin-pane="users">用户信息</button>
+        <button type="button" class="button secondary" data-admin-pane="login">楠岃瘉</button>
+        <button type="button" class="button secondary" data-admin-pane="upload">涓婁紶鐢靛瓙涔?/button>
+        <button type="button" class="button secondary" data-admin-pane="plan">璇讳功璁″垝</button>
+        <button type="button" class="button secondary" data-admin-pane="users">鐢ㄦ埛淇℃伅</button>
+        <button type="button" class="button secondary" data-admin-pane="comments">评论管理</button>
       </div>
       <div class="section-head">
         <p class="eyebrow">Admin</p>
-        <h2 id="admin-title">管理员后台</h2>
-        <p>用户信息默认隐藏，只有管理员验证后才能查看。</p>
+        <h2 id="admin-title">绠＄悊鍛樺悗鍙?/h2>
+        <p>鐢ㄦ埛淇℃伅榛樿闅愯棌锛屽彧鏈夌鐞嗗憳楠岃瘉鍚庢墠鑳芥煡鐪嬨€?/p>
       </div>
       <div class="panel admin-panel">
         <form class="admin-login" id="admin-login-form">
-          <h3>管理员验证</h3>
+          <h3>绠＄悊鍛橀獙璇?/h3>
           <label>
-            管理员口令
-            <input name="passcode" type="password" placeholder="请输入管理员口令" autocomplete="current-password" required />
+            绠＄悊鍛樺彛浠?            <input name="passcode" type="password" placeholder="璇疯緭鍏ョ鐞嗗憳鍙ｄ护" autocomplete="current-password" required />
           </label>
-          <button class="button primary" type="submit">进入后台</button>
-          <p class="form-note" id="admin-status">未验证管理员身份时，不显示任何用户名称或手机号码。</p>
+          <button class="button primary" type="submit">杩涘叆鍚庡彴</button>
+          <p class="form-note" id="admin-status">鏈獙璇佺鐞嗗憳韬唤鏃讹紝涓嶆樉绀轰换浣曠敤鎴峰悕绉版垨鎵嬫満鍙风爜銆?/p>
         </form>
         <form class="admin-upload" id="ebook-upload-form" hidden>
-          <h3>上传当月在读电子书</h3>
+          <h3>涓婁紶褰撴湀鍦ㄨ鐢靛瓙涔?/h3>
           <label>
-            电子书名称
-            <input name="title" type="text" placeholder="例如：城市慢读电子版" required />
+            鐢靛瓙涔﹀悕绉?            <input name="title" type="text" placeholder="渚嬪锛氬煄甯傛參璇荤數瀛愮増" required />
           </label>
           <label>
-            领读者
-            <input name="leader" type="text" placeholder="例如：Anna" required />
+            棰嗚鑰?            <input name="leader" type="text" placeholder="渚嬪锛欰nna" required />
           </label>
           <label>
-            领读者介绍
-            <textarea name="leaderIntro" rows="2" placeholder="例如：长期带领经典阅读，擅长把章节问题转化为讨论线索。" required></textarea>
+            棰嗚鑰呬粙缁?            <textarea name="leaderIntro" rows="2" placeholder="渚嬪锛氶暱鏈熷甫棰嗙粡鍏搁槄璇伙紝鎿呴暱鎶婄珷鑺傞棶棰樿浆鍖栦负璁ㄨ绾跨储銆? required></textarea>
           </label>
           <label>
-            电子书文件
-            <input name="ebook" type="file" accept=".pdf,.txt,.epub,.mobi,.html,.htm,.md" required />
+            鐢靛瓙涔︽枃浠?            <input name="ebook" type="file" accept=".pdf,.txt,.epub,.mobi,.html,.htm,.md" required />
           </label>
           <label>
-            电子书封面
-            <input name="cover" type="file" accept="image/*" />
+            鐢靛瓙涔﹀皝闈?            <input name="cover" type="file" accept="image/*" />
           </label>
           <label>
-            阅读说明
-            <textarea name="summary" rows="3" placeholder="说明本月阅读重点或章节范围"></textarea>
+            闃呰璇存槑
+            <textarea name="summary" rows="3" placeholder="璇存槑鏈湀闃呰閲嶇偣鎴栫珷鑺傝寖鍥?></textarea>
           </label>
-          <button class="button primary" type="submit">上传电子书</button>
-          <p class="form-note" id="ebook-upload-status">上传后，登录用户可在“当月在读”中查看电子书。</p>
-          <p class="form-note">当前静态演示版会把电子书保存到本浏览器的 localStorage：heBookroomEbooksV1。</p>
+          <button class="button primary" type="submit">涓婁紶鐢靛瓙涔?/button>
+          <p class="form-note" id="ebook-upload-status">涓婁紶鍚庯紝鐧诲綍鐢ㄦ埛鍙湪鈥滃綋鏈堝湪璇烩€濅腑鏌ョ湅鐢靛瓙涔︺€?/p>
+          <p class="form-note">褰撳墠闈欐€佹紨绀虹増浼氭妸鐢靛瓙涔︿繚瀛樺埌鏈祻瑙堝櫒鐨?localStorage锛歨eBookroomEbooksV1銆?/p>
         </form>
         <form class="admin-plan" id="reading-plan-form" hidden>
-          <h3>编辑每周读书计划</h3>
+          <h3>缂栬緫姣忓懆璇讳功璁″垝</h3>
           <label>
-            共读标签
-            <input name="label" type="text" placeholder="例如：5 月共读" required />
+            鍏辫鏍囩
+            <input name="label" type="text" placeholder="渚嬪锛? 鏈堝叡璇? required />
           </label>
           <label>
-            书名
-            <input name="title" type="text" placeholder="例如：《城市慢读：在日常里重新看见自己》" required />
+            涔﹀悕
+            <input name="title" type="text" placeholder="渚嬪锛氥€婂煄甯傛參璇伙細鍦ㄦ棩甯搁噷閲嶆柊鐪嬭鑷繁銆? required />
           </label>
           <label>
-            封面竖排文字
-            <input name="coverText" type="text" placeholder="例如：城市慢读" required />
+            灏侀潰绔栨帓鏂囧瓧
+            <input name="coverText" type="text" placeholder="渚嬪锛氬煄甯傛參璇? required />
           </label>
           <label>
-            共读说明
-            <textarea name="description" rows="3" placeholder="说明本月阅读安排" required></textarea>
+            鍏辫璇存槑
+            <textarea name="description" rows="3" placeholder="璇存槑鏈湀闃呰瀹夋帓" required></textarea>
           </label>
           <div class="plan-fields">
             <label>
-              第 1 周
-              <input name="week1" type="text" placeholder="第 1 周 · 1-3 章" required />
+              绗?1 鍛?              <input name="week1" type="text" placeholder="绗?1 鍛?路 1-3 绔? required />
             </label>
             <label>
-              第 2 周
-              <input name="week2" type="text" placeholder="第 2 周 · 4-6 章" required />
+              绗?2 鍛?              <input name="week2" type="text" placeholder="绗?2 鍛?路 4-6 绔? required />
             </label>
             <label>
-              第 3 周
-              <input name="week3" type="text" placeholder="第 3 周 · 7-9 章" required />
+              绗?3 鍛?              <input name="week3" type="text" placeholder="绗?3 鍛?路 7-9 绔? required />
             </label>
             <label>
-              第 4 周
-              <input name="week4" type="text" placeholder="第 4 周 · 分享会" required />
+              绗?4 鍛?              <input name="week4" type="text" placeholder="绗?4 鍛?路 鍒嗕韩浼? required />
             </label>
           </div>
-          <button class="button primary" type="submit">保存读书计划</button>
-          <p class="form-note" id="reading-plan-status">保存后会立即更新“当月在读”的每周计划。</p>
+          <button class="button primary" type="submit">淇濆瓨璇讳功璁″垝</button>
+          <p class="form-note" id="reading-plan-status">淇濆瓨鍚庝細绔嬪嵆鏇存柊鈥滃綋鏈堝湪璇烩€濈殑姣忓懆璁″垝銆?/p>
         </form>
         <table id="admin-user-table" hidden>
           <thead>
             <tr>
-              <th>用户名称</th>
-              <th>手机号码</th>
-              <th>注册时间</th>
+              <th>鐢ㄦ埛鍚嶇О</th>
+              <th>鎵嬫満鍙风爜</th>
+              <th>娉ㄥ唽鏃堕棿</th>
             </tr>
           </thead>
           <tbody id="admin-user-list"></tbody>
+        </table>
+        <table id="admin-comment-table" hidden>
+          <thead>
+            <tr>
+              <th>文章</th>
+              <th>评论者</th>
+              <th>评论内容</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="admin-comment-list"></tbody>
         </table>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <strong>禾书房</strong>
-    <span>当月在读 · 读者书摘 · 社群活动 · 我的读书</span>
+    <strong>绂句功鎴?/strong>
+    <span>褰撴湀鍦ㄨ 路 璇昏€呬功鎽?路 绀剧兢娲诲姩 路 鎴戠殑璇讳功</span>
   </footer>
 
   <template id="article-template">
@@ -282,12 +303,12 @@
       <h3 class="article-title"></h3>
       <p class="article-body"></p>
       <div class="comment-box">
-        <h4>评论</h4>
+        <h4>璇勮</h4>
         <div class="comment-list"></div>
         <form class="comment-form">
-          <input name="author" type="text" placeholder="昵称" required />
-          <input name="body" type="text" placeholder="写下你的评论" required />
-          <button class="button secondary" type="submit">评论</button>
+          <input name="author" type="text" placeholder="鏄电О" required />
+          <input name="body" type="text" placeholder="鍐欎笅浣犵殑璇勮" required />
+          <button class="button secondary" type="submit">璇勮</button>
         </form>
       </div>
     </article>
@@ -297,3 +318,4 @@
  <script src="script.js?v=20260521-rootfix2"></script>
 </body>
 </html>
+
