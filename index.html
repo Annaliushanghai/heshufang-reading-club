@@ -221,7 +221,45 @@
     </article>
   </template>
 
-  <script src="supabase-config.js?v=20260521-recover1"></script>
-  <script src="script.js?v=20260521-recover1"></script>
+  <script>
+    (function () {
+      function applySubpageVisibility(hash) {
+        var main = document.getElementById("home");
+        if (!main) return;
+        var sections = Array.prototype.slice.call(main.children || []);
+        var targetId = "";
+        if (hash === "mine") targetId = "mine";
+        if (hash === "admin") targetId = "admin";
+        if (hash === "monthly") targetId = "monthly";
+
+        if (!targetId) {
+          sections.forEach(function (node) {
+            node.hidden = false;
+            node.style.display = "";
+          });
+          return;
+        }
+
+        sections.forEach(function (node) {
+          var show = node.id === targetId;
+          node.hidden = !show;
+          node.style.display = show ? "" : "none";
+        });
+      }
+
+      function syncHashRoute() {
+        var hash = (location.hash || "#home").replace("#", "");
+        document.body.classList.toggle("subpage-mine", hash === "mine");
+        document.body.classList.toggle("subpage-admin", hash === "admin");
+        document.body.classList.toggle("subpage-monthly", hash === "monthly");
+        applySubpageVisibility(hash);
+      }
+      window.addEventListener("hashchange", syncHashRoute);
+      window.addEventListener("DOMContentLoaded", syncHashRoute);
+      syncHashRoute();
+    })();
+  </script>
+  <script src="supabase-config.js?v=20260521-routefix2"></script>
+  <script src="script.js?v=20260521-routefix2"></script>
 </body>
 </html>
