@@ -5,6 +5,9 @@ const READING_PLAN_KEY = "heBookroomReadingPlanV1";
 const ACTIVITY_KEY = "heBookroomActivitiesV1";
 const ADMIN_PASSCODE = "heshufang-admin";
 
+const SUPABASE_CONFIG = window.HE_SHUFANG_SUPABASE || { url: "", anonKey: "" };
+const SUPABASE_BUCKET = "ebooks";
+
 const articleForm = document.querySelector("#excerpt-form");
 const articleList = document.querySelector("#article-list");
 const articleTemplate = document.querySelector("#article-template");
@@ -36,7 +39,7 @@ const starterArticles = [
     id: "article-1",
     author: "Anna",
     title: "6月开始一起读《教学七律》",
-    body: "从经典的读起来，一个月读完《教学七律》。",
+    body: "从经典读起，一个月读完《教学七律》。",
     createdAt: "2026-05-20T08:30:00.000Z",
     comments: []
   }
@@ -46,19 +49,7 @@ const starterUsers = [
   { id: "u-1", name: "访客", phone: "未登记", createdAt: new Date().toISOString() }
 ];
 
-const starterEbooks = [
-  {
-    id: "ebook-1",
-    title: "《教学七律》",
-    leader: "Linda",
-    leaderIntro: "青年艺术家，艺术老师，意大利那不勒斯纯艺专业。",
-    fileName: "jiaoxueqilv.pdf",
-    type: "application/pdf",
-    dataUrl: "",
-    fileUrl: "",
-    createdAt: new Date().toISOString()
-  }
-];
+const starterEbooks = [];
 
 const defaultReadingPlan = {
   label: "6月共读",
@@ -69,7 +60,7 @@ const defaultReadingPlan = {
 };
 
 const starterActivities = [
-  { id: "ac-1", title: "Anna 新增1篇笔记", detail: "书摘发布", createdAt: new Date().toISOString() }
+  { id: "ac-1", title: "欢迎加入禾书房读书会", detail: "每周更新共读计划", createdAt: new Date().toISOString() }
 ];
 
 function loadJson(key, fallback) {
@@ -90,8 +81,8 @@ function createId(prefix) {
 }
 
 function formatDate(iso) {
-  const date = new Date(iso);
-  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+  const d = new Date(iso);
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
 function escapeHtml(value) {
@@ -111,21 +102,6 @@ function getFileExtension(fileName = "") {
   return fileName.split(".").pop()?.toLowerCase() || "";
 }
 
-function dataUrlToText(dataUrl) {
-  const [meta, payload = ""] = dataUrl.split(",");
-  if (meta.includes(";base64")) return atob(payload);
-  return decodeURIComponent(payload);
-}
-
-function dataUrlToBlobUrl(dataUrl) {
-  const [meta, payload = ""] = dataUrl.split(",");
-  const mimeType = (meta.match(/^data:([^;]+);/) || [])[1] || "application/octet-stream";
-  const bytes = meta.includes(";base64")
-    ? Uint8Array.from(atob(payload), c => c.charCodeAt(0))
-    : Uint8Array.from(decodeURIComponent(payload), c => c.charCodeAt(0));
-  return URL.createObjectURL(new Blob([bytes], { type: mimeType }));
-}
-
 async function readFileAsDataUrl(file) {
   return await new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -133,6 +109,51 @@ async function readFileAsDataUrl(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+function sanitizeStorageFileName(fileName) {
+  const dot = fileName.lastIndexOf(".");
+  const base = dot > 0 ? fileName.slice(0, dot) : fileName;
+  const ext = dot > 0 ? fileName.slice(dot + 1).toLowerCase() : "bin";
+  const safeBase = base
+    .normalize("NFKD")
+    .replace(/[^\w.-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase() || `ebook-${Date.now()}`;
+  return `${safeBase}.${ext}`;
+}
+
+function getStoragePublicUrl(fileName) {
+  const root = (SUPABASE_CONFIG.url || "").replace(/\/+$/, "");
+  return `${root}/storage/v1/object/public/${SUPABASE_BUCKET}/${encodeURIComponent(fileName)}`;
+}
+
+async function uploadToSupabaseStorage(file) {
+  if (!SUPABASE_CONFIG.url || !SUPABASE_CONFIG.anonKey) return null;
+  const safeName = sanitizeStorageFileName(file.name || "ebook.pdf");
+  const endpoint = `${SUPABASE_CONFIG.url.replace(/\/+$/, "")}/storage/v1/object/${SUPABASE_BUCKET}/${encodeURIComponent(safeName)}`;
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_CONFIG.anonKey,
+      Authorization: `Bearer ${SUPABASE_CONFIG.anonKey}`,
+      "Content-Type": file.type || "application/octet-stream",
+      "x-upsert": "true"
+    },
+    body: file
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(text || `Upload failed: ${response.status}`);
+  }
+
+  return {
+    storageName: safeName,
+    publicUrl: getStoragePublicUrl(safeName)
+  };
 }
 
 let articles = loadJson(ARTICLE_KEY, starterArticles);
@@ -143,6 +164,7 @@ let activities = loadJson(ACTIVITY_KEY, starterActivities);
 let adminAuthed = false;
 let adminPane = "login";
 let openEbookId = "";
+let cloudConnected = Boolean(SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey);
 
 function addActivity(title, detail) {
   activities.unshift({ id: createId("ac"), title, detail, createdAt: new Date().toISOString() });
@@ -175,7 +197,7 @@ function renderReadingPlan() {
       <h3>${escapeHtml(readingPlan.title)}</h3>
       <p>${escapeHtml(readingPlan.description)}</p>
       <div class="chapter-grid">
-        ${readingPlan.weeks.map(w => `<button type="button">${escapeHtml(w)}</button>`).join("")}
+        ${readingPlan.weeks.map((w, idx) => `<button type="button" data-open-week="${idx}">${escapeHtml(w)}</button>`).join("")}
       </div>
     </div>
   `;
@@ -226,7 +248,7 @@ function renderArticles() {
 }
 
 function renderEbooks() {
-  ebookAccessStatus.textContent = "本地模式可阅读";
+  ebookAccessStatus.textContent = cloudConnected ? "已连接云端同步" : "本地模式可阅读";
   if (!ebooks.length) {
     monthlyEbookList.innerHTML = `<article class="ebook-item"><strong>暂无电子书</strong></article>`;
     return;
@@ -257,11 +279,15 @@ async function openEbookReader(id) {
 
   ebookReaderTitle.textContent = book.title || "电子书阅读";
   const ext = getFileExtension(book.fileName);
-  const sourceUrl = book.fileUrl || (book.dataUrl ? dataUrlToBlobUrl(book.dataUrl) : "");
+  const sourceUrl = book.fileUrl || (book.dataUrl || "");
 
   if ((book.type || "").startsWith("text/") || ["txt", "md"].includes(ext)) {
-    const text = book.dataUrl ? dataUrlToText(book.dataUrl) : "暂无文本内容";
-    ebookReaderBody.innerHTML = `<pre class="ebook-text">${escapeHtml(text)}</pre>`;
+    if (book.dataUrl) {
+      const text = decodeURIComponent((book.dataUrl.split(",")[1] || ""));
+      ebookReaderBody.innerHTML = `<pre class="ebook-text">${escapeHtml(text)}</pre>`;
+    } else {
+      ebookReaderBody.innerHTML = `<p>文本未找到</p>`;
+    }
   } else if ((book.type || "") === "application/pdf" || ext === "pdf") {
     ebookReaderBody.innerHTML = `
       <div class="ebook-pdf-wrap">
@@ -269,8 +295,6 @@ async function openEbookReader(id) {
       </div>
       ${sourceUrl ? `<a class="button secondary reader-open-link" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">新窗口打开 PDF</a>` : ""}
     `;
-  } else if ((book.type || "").startsWith("image/")) {
-    ebookReaderBody.innerHTML = sourceUrl ? `<img class="ebook-image" src="${sourceUrl}" alt="${escapeHtml(book.title)}" />` : "";
   } else {
     ebookReaderBody.innerHTML = sourceUrl ? `<a class="button secondary" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">打开文件</a>` : "无法预览此文件";
   }
@@ -354,9 +378,7 @@ function syncSubpageRoute() {
   document.body.classList.toggle("subpage-admin", isAdmin);
   document.body.classList.toggle("subpage-monthly", isMonthly);
 
-  if (isAdmin) {
-    setAdminPane(adminAuthed ? (adminPane === "login" ? "upload" : adminPane) : "login");
-  }
+  if (isAdmin) setAdminPane(adminAuthed ? (adminPane === "login" ? "upload" : adminPane) : "login");
 }
 
 articleForm.addEventListener("submit", event => {
@@ -387,6 +409,15 @@ monthlyEbookList.addEventListener("click", event => {
   const btn = event.target.closest("[data-open-ebook]");
   if (!btn) return;
   openEbookReader(btn.getAttribute("data-open-ebook"));
+});
+
+currentBook.addEventListener("click", event => {
+  const btn = event.target.closest("[data-open-week]");
+  if (!btn) return;
+  const firstBook = ebooks[0];
+  if (!firstBook) return;
+  openEbookReader(firstBook.id);
+  document.querySelector("#monthly-ebook-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 ebookReaderClose.addEventListener("click", () => {
@@ -420,23 +451,41 @@ ebookUploadForm.addEventListener("submit", async event => {
   const file = data.get("ebook");
   if (!(file instanceof File) || file.size === 0) return;
   const cover = data.get("cover");
+
+  let fileUrl = "";
+  let storageName = "";
+  let mode = "本地";
+  try {
+    const uploaded = await uploadToSupabaseStorage(file);
+    if (uploaded?.publicUrl) {
+      fileUrl = uploaded.publicUrl;
+      storageName = uploaded.storageName;
+      mode = "云端";
+      cloudConnected = true;
+    }
+  } catch (e) {
+    console.warn(e);
+  }
+
   const book = {
     id: createId("ebook"),
     title: String(data.get("title") || "").trim(),
     leader: String(data.get("leader") || "").trim(),
     leaderIntro: String(data.get("leaderIntro") || "").trim(),
     summary: String(data.get("summary") || "").trim(),
-    fileName: file.name,
+    fileName: storageName || file.name,
     type: file.type || "application/octet-stream",
-    dataUrl: await readFileAsDataUrl(file),
-    fileUrl: "",
+    dataUrl: fileUrl ? "" : await readFileAsDataUrl(file),
+    fileUrl,
     coverUrl: (cover instanceof File && cover.size > 0) ? await readFileAsDataUrl(cover) : "",
     createdAt: new Date().toISOString()
   };
+
   ebooks = [book];
   saveJson(EBOOK_KEY, ebooks);
-  ebookUploadStatus.textContent = `已上传：${file.name}`;
+  ebookUploadStatus.textContent = `已上传：${file.name}（${mode}）`;
   ebookUploadForm.reset();
+  renderReadingPlan();
   renderEbooks();
   addActivity("管理员上传了电子书", book.title);
 });
