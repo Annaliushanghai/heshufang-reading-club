@@ -164,6 +164,42 @@ function getStoragePublicUrlWithBucket(bucket, path) {
   return `${SUPABASE_CONFIG.url}/storage/v1/object/public/${bucket}/${path}`;
 }
 
+async function findStorageObjectPathByName(fileName) {
+  if (!cloudEnabled || !fileName) return "";
+  const bucketCandidates = [SUPABASE_STORAGE_BUCKET, SUPABASE_STORAGE_BUCKET_FALLBACK];
+  for (const bucket of bucketCandidates) {
+    try {
+      const listUrl = `${SUPABASE_CONFIG.url}/storage/v1/object/list/${bucket}`;
+      const response = await fetch(listUrl, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_CONFIG.anonKey,
+          Authorization: `Bearer ${SUPABASE_CONFIG.anonKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          limit: 200,
+          offset: 0,
+          sortBy: { column: "created_at", order: "desc" }
+        })
+      });
+      if (!response.ok) continue;
+      const rows = await response.json();
+      if (!Array.isArray(rows)) continue;
+      const safeTarget = sanitizeStorageFileName(fileName);
+      const match = rows.find(item => {
+        const name = String(item?.name || "");
+        const safeName = sanitizeStorageFileName(name);
+        return name === fileName || safeName === safeTarget || name.endsWith(`/${fileName}`) || safeName.endsWith(`/${safeTarget}`);
+      });
+      if (match?.name) return getStoragePublicUrlWithBucket(bucket, String(match.name));
+    } catch {
+      // ignore and continue
+    }
+  }
+  return "";
+}
+
 function sanitizeStorageFileName(fileName) {
   const lastDot = fileName.lastIndexOf(".");
   const rawBase = lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
@@ -581,6 +617,10 @@ async function resolvePreferredEbookUrl(ebook) {
     } catch {
       // continue trying next candidate
     }
+  }
+  if (ebook?.fileName) {
+    const resolvedByList = await findStorageObjectPathByName(ebook.fileName);
+    if (resolvedByList) return resolvedByList;
   }
   const nonDuplicated = candidates.find(url => !url.includes("/public/ebooks/ebooks/"));
   return nonDuplicated || candidates[0] || "";
