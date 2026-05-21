@@ -7,6 +7,7 @@ const ADMIN_PASSCODE = "heshufang-admin";
 const SUPABASE_CONFIG = window.HE_SHUFANG_SUPABASE || { url: "", anonKey: "" };
 const SUPABASE_STATE_TABLE = "heshufang_state";
 const SUPABASE_STATE_ID = "global";
+const SUPABASE_STORAGE_BUCKET = "ebooks";
 const cloudEnabled = Boolean(SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey);
 let cloudSyncTimer = null;
 let cloudSyncing = false;
@@ -104,6 +105,11 @@ const articleForm = document.querySelector("#excerpt-form");
 const articleList = document.querySelector("#article-list");
 const articleTemplate = document.querySelector("#article-template");
 const readingDetail = document.querySelector("#reading-detail");
+const mineSection = document.querySelector("#mine");
+const mineFab = document.querySelector("#mine-fab");
+const mineBackdrop = document.querySelector("#mine-backdrop");
+const mineCloseBtn = document.querySelector("#mine-close-btn");
+const mineSubmenu = document.querySelector("#mine-submenu");
 const adminLoginForm = document.querySelector("#admin-login-form");
 const adminStatus = document.querySelector("#admin-status");
 const adminUserTable = document.querySelector("#admin-user-table");
@@ -120,6 +126,11 @@ const currentBook = document.querySelector("#current-book");
 const readingPlanForm = document.querySelector("#reading-plan-form");
 const readingPlanStatus = document.querySelector("#reading-plan-status");
 const activityList = document.querySelector("#activity-list");
+const adminSection = document.querySelector("#admin");
+const adminFab = document.querySelector("#admin-fab");
+const adminBackdrop = document.querySelector("#admin-backdrop");
+const adminCloseBtn = document.querySelector("#admin-close-btn");
+const adminSubmenu = document.querySelector("#admin-submenu");
 
 function loadJson(key, fallback) {
   try {
@@ -141,6 +152,31 @@ function getCloudHeaders() {
     Authorization: `Bearer ${SUPABASE_CONFIG.anonKey}`,
     "Content-Type": "application/json"
   };
+}
+
+function getStoragePublicUrl(path) {
+  return `${SUPABASE_CONFIG.url}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/${path}`;
+}
+
+async function uploadToStorage(file, folder = "ebooks") {
+  if (!cloudEnabled) return "";
+  const safeName = file.name.replace(/\s+/g, "-");
+  const path = `${folder}/${Date.now()}-${Math.random().toString(16).slice(2)}-${safeName}`;
+  const url = `${SUPABASE_CONFIG.url}/storage/v1/object/${SUPABASE_STORAGE_BUCKET}/${path}`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_CONFIG.anonKey,
+      Authorization: `Bearer ${SUPABASE_CONFIG.anonKey}`,
+      "x-upsert": "true",
+      "Content-Type": file.type || "application/octet-stream"
+    },
+    body: file
+  });
+  if (!response.ok) {
+    throw new Error(`storage upload failed: ${response.status}`);
+  }
+  return getStoragePublicUrl(path);
 }
 
 function getCurrentState() {
@@ -250,6 +286,8 @@ let adminAuthed = false;
 let openEbookId = "";
 let currentReaderBlobUrl = "";
 let cloudConnected = false;
+let adminPane = "login";
+let minePane = "overview";
 
 function escapeHtml(value) {
   return String(value)
@@ -376,7 +414,7 @@ function renderCover() {
 function renderReadingPlan() {
   currentBook.innerHTML = `
     ${renderCover()}
-    <div>
+    <div data-mine-pane="finished">
       <span class="tag">${escapeHtml(readingPlan.label)}</span>
       <h3>${escapeHtml(readingPlan.title)}</h3>
       <p>${escapeHtml(readingPlan.description)}</p>
@@ -459,7 +497,54 @@ function dataUrlToBlobUrl(dataUrl) {
   return URL.createObjectURL(new Blob([bytes], { type: mimeType }));
 }
 
-function openEbookReader(ebookId) {
+function dataUrlToFile(dataUrl, fileName = "ebook.pdf") {
+  const [meta, payload = ""] = dataUrl.split(",");
+  const mimeMatch = meta.match(/^data:([^;]+);/);
+  const mimeType = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+  let bytes;
+  if (meta.includes(";base64")) {
+    const binary = atob(payload);
+    bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+  } else {
+    const decoded = decodeURIComponent(payload);
+    bytes = Uint8Array.from(decoded, char => char.charCodeAt(0));
+  }
+  return new File([bytes], fileName, { type: mimeType });
+}
+
+async function migrateLegacyPdfToStorage() {
+  if (!cloudEnabled) return;
+  let changed = false;
+  for (const ebook of ebooks) {
+    const extension = getFileExtension(ebook.fileName || "");
+    const isPdf = ebook.type === "application/pdf" || extension === "pdf";
+    if (!isPdf) continue;
+    if (ebook.fileUrl || !ebook.dataUrl) continue;
+    try {
+      const file = dataUrlToFile(ebook.dataUrl, ebook.fileName || "ebook.pdf");
+      const fileUrl = await uploadToStorage(file, "ebooks");
+      ebook.fileUrl = fileUrl;
+      ebook.dataUrl = "";
+      changed = true;
+    } catch (error) {
+      console.warn("migrate legacy pdf failed:", error);
+    }
+  }
+  if (changed) {
+    saveJson(EBOOK_KEY, ebooks);
+  }
+}
+
+async function readEbookText(ebook) {
+  if (ebook.dataUrl) return dataUrlToText(ebook.dataUrl);
+  if (ebook.fileUrl) {
+    const response = await fetch(ebook.fileUrl);
+    return await response.text();
+  }
+  return "";
+}
+
+async function openEbookReader(ebookId) {
   const ebook = ebooks.find(item => item.id === ebookId);
   if (!ebook) return;
   if (openEbookId === ebookId && !ebookReader.hidden) {
@@ -472,6 +557,7 @@ function openEbookReader(ebookId) {
 
   const displayTitle = readingPlan.title || ebook.title;
   const extension = getFileExtension(ebook.fileName);
+  const sourceUrl = ebook.fileUrl || ebook.dataUrl || "";
   ebookReaderTitle.textContent = displayTitle;
   if (currentReaderBlobUrl) {
     URL.revokeObjectURL(currentReaderBlobUrl);
@@ -480,9 +566,11 @@ function openEbookReader(ebookId) {
 
   if (ebook.type.startsWith("text/") || ["txt", "md"].includes(extension)) {
     ebookReaderBody.innerHTML = `<pre class="ebook-text"></pre>`;
-    ebookReaderBody.querySelector("pre").textContent = dataUrlToText(ebook.dataUrl);
+    ebookReaderBody.querySelector("pre").textContent = await readEbookText(ebook);
   } else if (ebook.type === "application/pdf" || extension === "pdf") {
-    currentReaderBlobUrl = dataUrlToBlobUrl(ebook.dataUrl);
+    if (ebook.dataUrl) currentReaderBlobUrl = dataUrlToBlobUrl(ebook.dataUrl);
+    const frameUrl = currentReaderBlobUrl || sourceUrl;
+    if (!ebook.dataUrl) currentReaderBlobUrl = sourceUrl;
     ebookReaderBody.innerHTML = `
       <p class="reader-tip">如果下方 PDF 区域空白，请点击“新窗口打开 PDF”。</p>
       <iframe class="ebook-frame" title="${escapeHtml(displayTitle)}"></iframe>
@@ -491,9 +579,9 @@ function openEbookReader(ebookId) {
     ebookReaderBody.querySelector("iframe")?.setAttribute("src", currentReaderBlobUrl);
   } else if (ebook.type === "text/html" || ["html", "htm"].includes(extension)) {
     ebookReaderBody.innerHTML = `<iframe class="ebook-frame" title="${escapeHtml(displayTitle)}"></iframe>`;
-    ebookReaderBody.querySelector("iframe").src = ebook.dataUrl;
+    ebookReaderBody.querySelector("iframe").src = sourceUrl;
   } else if (ebook.type.startsWith("image/")) {
-    ebookReaderBody.innerHTML = `<img class="ebook-image" src="${ebook.dataUrl}" alt="${escapeHtml(displayTitle)}" />`;
+    ebookReaderBody.innerHTML = `<img class="ebook-image" src="${sourceUrl}" alt="${escapeHtml(displayTitle)}" />`;
   } else {
     ebookReaderBody.innerHTML = `
       <div class="reader-fallback">
@@ -570,12 +658,12 @@ function renderReadingDetail() {
         </div>
       </div>
     </div>
-    <div class="progress-card">
+    <div class="progress-card" data-mine-pane="overview">
       <strong>本月阅读进度 ${readingProfile.progress}%</strong>
       <div class="progress-track" style="--progress: ${readingProfile.progress}%"><span></span></div>
       <span>已连续阅读 ${readingProfile.days} 天，继续完成本月共读可升级为“深读者勋章”。</span>
     </div>
-    <div class="medal-section">
+    <div class="medal-section" data-mine-pane="medal">
       <div class="medal-head">
         <h3>我的勋章</h3>
         <span>坚持 1 周获得红色勋章，读完 1 本书获得黄色勋章，发表 10 个书摘获得蓝色勋章</span>
@@ -590,16 +678,16 @@ function renderReadingDetail() {
         `).join("")}
       </div>
     </div>
-    <div class="detail-grid">
+    <div class="detail-grid" data-mine-pane="overview">
       <article><strong>${excerptCount}</strong><span>我的书摘</span></article>
       <article><strong>${myComments.length}</strong><span>我的评论</span></article>
       <article><strong>${earnedBadges.length}</strong><span>已获得勋章</span></article>
     </div>
-    <div>
+    <div data-mine-pane="notes">
       <h3>我的已读</h3>
       <ul class="mini-list">${readingProfile.finishedBooks.map(book => `<li>${escapeHtml(book)}</li>`).join("")}</ul>
     </div>
-    <div>
+    <div data-mine-pane="comments">
       <h3>我的书摘</h3>
       <ul class="mini-list">${notes.map(note => `<li>${escapeHtml(note)}</li>`).join("")}</ul>
     </div>
@@ -608,21 +696,17 @@ function renderReadingDetail() {
       <ul class="mini-list">${comments.map(comment => `<li>${escapeHtml(comment)}</li>`).join("")}</ul>
     </div>
   `;
+  setMinePane(minePane);
 }
 
 function renderAdminUsers() {
   if (!adminAuthed) {
-    adminUserTable.hidden = true;
     adminUserList.innerHTML = "";
-    ebookUploadForm.hidden = true;
-    readingPlanForm.hidden = true;
+    setAdminPane("login");
     return;
   }
-
-  adminUserTable.hidden = false;
-  ebookUploadForm.hidden = false;
-  readingPlanForm.hidden = false;
   syncReadingPlanForm();
+  setAdminPane(adminPane === "login" ? "upload" : adminPane);
 
   if (!users.length) {
     adminUserList.innerHTML = `<tr><td colspan="3">暂无注册用户</td></tr>`;
@@ -639,6 +723,120 @@ function renderAdminUsers() {
     `)
     .join("");
 }
+
+function openAdminDrawer() {
+  document.body.classList.add("admin-open");
+  if (adminBackdrop) adminBackdrop.hidden = false;
+  if (adminFab) adminFab.setAttribute("aria-expanded", "true");
+}
+
+function closeAdminDrawer() {
+  document.body.classList.remove("admin-open");
+  if (adminBackdrop) adminBackdrop.hidden = true;
+  if (adminFab) adminFab.setAttribute("aria-expanded", "false");
+}
+
+function setAdminPane(pane) {
+  adminPane = pane;
+  const showLogin = pane === "login";
+  const showUpload = pane === "upload" && adminAuthed;
+  const showPlan = pane === "plan" && adminAuthed;
+  const showUsers = pane === "users" && adminAuthed;
+
+  adminLoginForm.hidden = !showLogin;
+  ebookUploadForm.hidden = !showUpload;
+  readingPlanForm.hidden = !showPlan;
+  adminUserTable.hidden = !showUsers;
+
+  if (!adminAuthed && pane !== "login") {
+    adminStatus.textContent = "请先完成管理员验证后，再查看上传、计划和用户信息。";
+  }
+
+  if (adminSubmenu) {
+    Array.from(adminSubmenu.querySelectorAll("[data-admin-pane]")).forEach(button => {
+      const active = button.getAttribute("data-admin-pane") === pane;
+      button.classList.toggle("is-active", active);
+    });
+  }
+}
+
+function openMineDrawer() {
+  document.body.classList.add("mine-open");
+  if (mineBackdrop) mineBackdrop.hidden = false;
+  if (mineFab) mineFab.setAttribute("aria-expanded", "true");
+}
+
+function closeMineDrawer() {
+  document.body.classList.remove("mine-open");
+  if (mineBackdrop) mineBackdrop.hidden = true;
+  if (mineFab) mineFab.setAttribute("aria-expanded", "false");
+}
+
+function setMinePane(pane) {
+  minePane = pane;
+  const blocks = readingDetail.querySelectorAll("[data-mine-pane]");
+  blocks.forEach(block => {
+    const belongs = block.getAttribute("data-mine-pane") === pane
+      || (pane === "overview" && block.getAttribute("data-mine-pane") === "overview");
+    block.hidden = !belongs;
+  });
+  if (mineSubmenu) {
+    Array.from(mineSubmenu.querySelectorAll("[data-mine-pane]")).forEach(button => {
+      const active = button.getAttribute("data-mine-pane") === pane;
+      button.classList.toggle("is-active", active);
+    });
+  }
+}
+
+function syncSubpageRoute() {
+  const hash = (location.hash || "#home").replace("#", "");
+  const isMine = hash === "mine";
+  const isAdmin = hash === "admin";
+
+  document.body.classList.toggle("subpage-mine", isMine);
+  document.body.classList.toggle("subpage-admin", isAdmin);
+
+  if (isMine) {
+    setMinePane(minePane || "overview");
+    closeAdminDrawer();
+  } else if (isAdmin) {
+    setAdminPane(adminAuthed ? (adminPane === "login" ? "upload" : adminPane) : "login");
+    closeMineDrawer();
+  } else {
+    closeMineDrawer();
+    closeAdminDrawer();
+  }
+}
+
+adminFab?.addEventListener("click", () => {
+  openAdminDrawer();
+  setAdminPane(adminAuthed ? (adminPane === "login" ? "upload" : adminPane) : "login");
+});
+
+mineFab?.addEventListener("click", () => {
+  openMineDrawer();
+  setMinePane(minePane);
+});
+
+mineCloseBtn?.addEventListener("click", closeMineDrawer);
+mineBackdrop?.addEventListener("click", closeMineDrawer);
+
+mineSubmenu?.addEventListener("click", event => {
+  const button = event.target.closest("[data-mine-pane]");
+  if (!button) return;
+  setMinePane(button.getAttribute("data-mine-pane"));
+});
+
+adminCloseBtn?.addEventListener("click", closeAdminDrawer);
+adminBackdrop?.addEventListener("click", closeAdminDrawer);
+
+adminSubmenu?.addEventListener("click", event => {
+  const button = event.target.closest("[data-admin-pane]");
+  if (!button) return;
+  setAdminPane(button.getAttribute("data-admin-pane"));
+});
+
+window.addEventListener("hashchange", syncSubpageRoute);
 
 articleForm.addEventListener("submit", event => {
   event.preventDefault();
@@ -679,6 +877,7 @@ adminLoginForm.addEventListener("submit", event => {
   adminAuthed = true;
   adminStatus.textContent = "管理员已验证，可查看注册用户名称及手机号码。";
   adminLoginForm.reset();
+  setAdminPane("upload");
   renderAdminUsers();
 });
 
@@ -762,6 +961,90 @@ monthlyEbookList.addEventListener("click", event => {
   openEbookReader(button.dataset.openEbook);
 });
 
+// Capture submit before legacy handler so PDF can sync through Supabase Storage.
+ebookUploadForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+
+  const data = new FormData(ebookUploadForm);
+  const title = String(data.get("title")).trim();
+  const leader = String(data.get("leader")).trim();
+  const leaderIntro = String(data.get("leaderIntro")).trim();
+  const summary = String(data.get("summary")).trim();
+  const file = data.get("ebook");
+  const cover = data.get("cover");
+  if (!title || !leader || !leaderIntro || !(file instanceof File) || !file.name) return;
+
+  const readFileAsDataUrl = targetFile => new Promise(resolve => {
+    if (!(targetFile instanceof File) || !targetFile.name) {
+      resolve("");
+      return;
+    }
+    const fileReader = new FileReader();
+    fileReader.addEventListener("load", () => resolve(String(fileReader.result)));
+    fileReader.readAsDataURL(targetFile);
+  });
+
+  try {
+    let ebookDataUrl = "";
+    let ebookFileUrl = "";
+    let coverDataUrl = "";
+    let coverFileUrl = "";
+    const extension = getFileExtension(file.name);
+    const isPdf = (file.type === "application/pdf" || extension === "pdf");
+
+    if (cloudEnabled) {
+      ebookFileUrl = await uploadToStorage(file, "ebooks");
+      if (cover instanceof File && cover.name) {
+        coverFileUrl = await uploadToStorage(cover, "covers");
+      }
+    } else {
+      [ebookDataUrl, coverDataUrl] = await Promise.all([readFileAsDataUrl(file), readFileAsDataUrl(cover)]);
+    }
+
+    if (!ebookFileUrl && !ebookDataUrl) ebookDataUrl = await readFileAsDataUrl(file);
+    if (!coverFileUrl && !coverDataUrl && cover instanceof File && cover.name) {
+      coverDataUrl = await readFileAsDataUrl(cover);
+    }
+
+    const uploadedEbook = {
+      id: createId("ebook"),
+      title,
+      leader,
+      leaderIntro,
+      fileName: file.name,
+      type: file.type || "application/octet-stream",
+      summary,
+      dataUrl: isPdf ? "" : ebookDataUrl,
+      fileUrl: ebookFileUrl,
+      coverUrl: coverFileUrl || coverDataUrl,
+      createdAt: new Date().toISOString()
+    };
+
+    ebooks.unshift(uploadedEbook);
+    ebooks = ebooks.map((ebook, index) => index === 0 ? uploadedEbook : ebook);
+    readingPlan = {
+      ...readingPlan,
+      title,
+      coverText: title.replace(/[《》]/g, "").slice(0, 4) || readingPlan.coverText,
+      coverUrl: (coverFileUrl || coverDataUrl) || readingPlan.coverUrl || "",
+      description: summary || readingPlan.description
+    };
+
+    saveJson(EBOOK_KEY, ebooks);
+    saveJson(READING_PLAN_KEY, readingPlan);
+    ebookUploadForm.reset();
+    ebookUploadStatus.textContent = `已上传：${file.name}。已同步到云端，其他设备刷新后可阅读。`;
+    renderReadingPlan();
+    renderReadingDetail();
+    renderEbooks();
+    syncReadingPlanForm();
+  } catch (error) {
+    console.warn(error);
+    ebookUploadStatus.textContent = "上传失败：请先在 Supabase Storage 创建公开 bucket：ebooks，然后重试。";
+  }
+}, true);
+
 ebookReaderClose.addEventListener("click", () => {
   ebookReader.hidden = true;
   ebookReaderBody.innerHTML = "";
@@ -796,6 +1079,7 @@ async function bootstrap() {
       } else {
         await pushCloudState(true);
       }
+      await migrateLegacyPdfToStorage();
       cloudConnected = true;
     } catch (error) {
       console.warn("Supabase bootstrap failed, fallback to localStorage:", error);
@@ -807,7 +1091,12 @@ async function bootstrap() {
   renderReadingPlan();
   renderActivities();
   renderReadingDetail();
+  setMinePane("overview");
+  closeMineDrawer();
   renderAdminUsers();
+  setAdminPane("login");
+  closeAdminDrawer();
+  syncSubpageRoute();
   renderEbooks();
 }
 
