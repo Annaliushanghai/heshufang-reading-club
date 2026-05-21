@@ -34,9 +34,9 @@ const adminSubmenu = document.querySelector("#admin-submenu");
 const starterArticles = [
   {
     id: "article-1",
-    author: "青禾",
+    author: "Anna",
     title: "6月开始一起读《教学七律》",
-    body: "从轻经典读起来，一个月读完《教学七律》。",
+    body: "从经典的读起来，一个月读完《教学七律》。",
     createdAt: "2026-05-20T08:30:00.000Z",
     comments: []
   }
@@ -331,6 +331,25 @@ function setAdminPane(pane) {
   readingPlanForm.hidden = !showPlan;
   adminUserTable.hidden = !showUsers;
   adminCommentTable.hidden = !showComments;
+
+  Array.from(adminSubmenu.querySelectorAll("[data-admin-pane]")).forEach(btn => {
+    btn.classList.toggle("is-active", btn.getAttribute("data-admin-pane") === pane);
+  });
+}
+
+function syncSubpageRoute() {
+  const hash = (location.hash || "#home").replace("#", "");
+  const isMine = hash === "mine";
+  const isAdmin = hash === "admin";
+  const isMonthly = hash === "monthly";
+
+  document.body.classList.toggle("subpage-mine", isMine);
+  document.body.classList.toggle("subpage-admin", isAdmin);
+  document.body.classList.toggle("subpage-monthly", isMonthly);
+
+  if (isAdmin) {
+    setAdminPane(adminAuthed ? (adminPane === "login" ? "upload" : adminPane) : "login");
+  }
 }
 
 articleForm.addEventListener("submit", event => {
@@ -450,6 +469,8 @@ adminCommentList.addEventListener("click", event => {
   renderAdminComments();
 });
 
+window.addEventListener("hashchange", syncSubpageRoute);
+
 function bootstrap() {
   renderReadingPlan();
   renderActivities();
@@ -459,6 +480,7 @@ function bootstrap() {
   renderAdminUsers();
   renderAdminComments();
   setAdminPane("login");
+  syncSubpageRoute();
 }
 
 bootstrap();
