@@ -547,21 +547,27 @@ function dataUrlToFile(dataUrl, fileName = "ebook.pdf") {
 function getEbookUrlCandidates(ebook) {
   if (!ebook) return [];
   const candidates = [];
-  if (ebook.fileUrl) candidates.push(ebook.fileUrl);
+  if (ebook.fileUrl) {
+    candidates.push(ebook.fileUrl);
+    if (ebook.fileUrl.includes("/public/ebooks/ebooks/")) {
+      candidates.push(ebook.fileUrl.replace("/public/ebooks/ebooks/", "/public/ebooks/"));
+    }
+  }
   if (hasSupabaseUrl && ebook.storagePath) {
     candidates.push(getStoragePublicUrl(ebook.storagePath));
     candidates.push(getStoragePublicUrlWithBucket(SUPABASE_STORAGE_BUCKET_FALLBACK, ebook.storagePath));
   }
   if (hasSupabaseUrl && ebook.fileName) {
     const safeName = sanitizeStorageFileName(ebook.fileName);
-    candidates.push(getStoragePublicUrl(`ebooks/${safeName}`));
     candidates.push(getStoragePublicUrl(safeName));
-    candidates.push(getStoragePublicUrl(`ebooks/${ebook.fileName}`));
     candidates.push(getStoragePublicUrl(ebook.fileName));
-    candidates.push(getStoragePublicUrlWithBucket(SUPABASE_STORAGE_BUCKET_FALLBACK, `ebooks/${safeName}`));
     candidates.push(getStoragePublicUrlWithBucket(SUPABASE_STORAGE_BUCKET_FALLBACK, safeName));
-    candidates.push(getStoragePublicUrlWithBucket(SUPABASE_STORAGE_BUCKET_FALLBACK, `ebooks/${ebook.fileName}`));
     candidates.push(getStoragePublicUrlWithBucket(SUPABASE_STORAGE_BUCKET_FALLBACK, ebook.fileName));
+    // Legacy fallback for earlier path convention.
+    candidates.push(getStoragePublicUrl(`ebooks/${safeName}`));
+    candidates.push(getStoragePublicUrl(`ebooks/${ebook.fileName}`));
+    candidates.push(getStoragePublicUrlWithBucket(SUPABASE_STORAGE_BUCKET_FALLBACK, `ebooks/${safeName}`));
+    candidates.push(getStoragePublicUrlWithBucket(SUPABASE_STORAGE_BUCKET_FALLBACK, `ebooks/${ebook.fileName}`));
   }
   return [...new Set(candidates.filter(Boolean))];
 }
@@ -576,7 +582,8 @@ async function resolvePreferredEbookUrl(ebook) {
       // continue trying next candidate
     }
   }
-  return candidates[0] || "";
+  const nonDuplicated = candidates.find(url => !url.includes("/public/ebooks/ebooks/"));
+  return nonDuplicated || candidates[0] || "";
 }
 
 async function migrateLegacyPdfToStorage() {
