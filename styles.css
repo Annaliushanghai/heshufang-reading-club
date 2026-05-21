@@ -403,6 +403,12 @@ main {
   width: fit-content;
 }
 
+.reader-inline-tip {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .reader-url-wrap {
   margin-top: 10px;
   display: grid;
