@@ -9,6 +9,7 @@ const SUPABASE_STATE_TABLE = "heshufang_state";
 const SUPABASE_STATE_ID = "global";
 const SUPABASE_STORAGE_BUCKET = "ebooks";
 const cloudEnabled = Boolean(SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey);
+const hasSupabaseUrl = Boolean(SUPABASE_CONFIG.url);
 let cloudSyncTimer = null;
 let cloudSyncing = false;
 
@@ -158,9 +159,27 @@ function getStoragePublicUrl(path) {
   return `${SUPABASE_CONFIG.url}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/${path}`;
 }
 
+function sanitizeStorageFileName(fileName) {
+  const lastDot = fileName.lastIndexOf(".");
+  const rawBase = lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
+  const rawExt = lastDot > 0 ? fileName.slice(lastDot + 1) : "";
+  const safeBase = rawBase
+    .normalize("NFKD")
+    .replace(/[^\x00-\x7F]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    || "ebook";
+  const safeExt = rawExt
+    .normalize("NFKD")
+    .replace(/[^\x00-\x7F]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "")
+    .toLowerCase();
+  return safeExt ? `${safeBase}.${safeExt}` : safeBase;
+}
+
 async function uploadToStorage(file, folder = "ebooks") {
   if (!cloudEnabled) return "";
-  const safeName = file.name.replace(/\s+/g, "-");
+  const safeName = sanitizeStorageFileName(file.name);
   const path = `${folder}/${Date.now()}-${Math.random().toString(16).slice(2)}-${safeName}`;
   const url = `${SUPABASE_CONFIG.url}/storage/v1/object/${SUPABASE_STORAGE_BUCKET}/${path}`;
   const response = await fetch(url, {
@@ -177,7 +196,7 @@ async function uploadToStorage(file, folder = "ebooks") {
     console.warn(`storage upload failed: ${response.status}`);
     return "";
   }
-  return getStoragePublicUrl(path);
+  return { publicUrl: getStoragePublicUrl(path), storagePath: path };
 }
 
 function getCurrentState() {
@@ -517,6 +536,34 @@ function dataUrlToFile(dataUrl, fileName = "ebook.pdf") {
   return new File([bytes], fileName, { type: mimeType });
 }
 
+function getEbookUrlCandidates(ebook) {
+  if (!ebook) return [];
+  const candidates = [];
+  if (ebook.fileUrl) candidates.push(ebook.fileUrl);
+  if (hasSupabaseUrl && ebook.storagePath) candidates.push(getStoragePublicUrl(ebook.storagePath));
+  if (hasSupabaseUrl && ebook.fileName) {
+    const safeName = sanitizeStorageFileName(ebook.fileName);
+    candidates.push(getStoragePublicUrl(`ebooks/${safeName}`));
+    candidates.push(getStoragePublicUrl(safeName));
+    candidates.push(getStoragePublicUrl(`ebooks/${ebook.fileName}`));
+    candidates.push(getStoragePublicUrl(ebook.fileName));
+  }
+  return [...new Set(candidates.filter(Boolean))];
+}
+
+async function resolvePreferredEbookUrl(ebook) {
+  const candidates = getEbookUrlCandidates(ebook);
+  for (const url of candidates) {
+    try {
+      const response = await fetch(url, { method: "HEAD" });
+      if (response.ok) return url;
+    } catch {
+      // continue trying next candidate
+    }
+  }
+  return candidates[0] || "";
+}
+
 async function migrateLegacyPdfToStorage() {
   if (!cloudEnabled) return;
   let changed = false;
@@ -527,8 +574,9 @@ async function migrateLegacyPdfToStorage() {
     if (ebook.fileUrl || !ebook.dataUrl) continue;
     try {
       const file = dataUrlToFile(ebook.dataUrl, ebook.fileName || "ebook.pdf");
-      const fileUrl = await uploadToStorage(file, "ebooks");
-      ebook.fileUrl = fileUrl;
+      const uploadResult = await uploadToStorage(file, "ebooks");
+      ebook.fileUrl = uploadResult?.publicUrl || "";
+      ebook.storagePath = uploadResult?.storagePath || "";
       ebook.dataUrl = "";
       changed = true;
     } catch (error) {
@@ -562,7 +610,7 @@ async function openEbookReader(ebookId) {
 
   const displayTitle = readingPlan.title || ebook.title;
   const extension = getFileExtension(ebook.fileName);
-  const sourceUrl = ebook.fileUrl || ebook.dataUrl || "";
+  const sourceUrl = (await resolvePreferredEbookUrl(ebook)) || ebook.dataUrl || "";
   ebookReaderTitle.textContent = displayTitle;
   if (currentReaderBlobUrl) {
     URL.revokeObjectURL(currentReaderBlobUrl);
@@ -817,9 +865,11 @@ function setMinePane(pane) {
 
 function syncSubpageRoute() {
   const hash = (location.hash || "#home").replace("#", "");
+  const isMonthly = hash === "monthly";
   const isMine = hash === "mine";
   const isAdmin = hash === "admin";
 
+  document.body.classList.toggle("subpage-monthly", isMonthly);
   document.body.classList.toggle("subpage-mine", isMine);
   document.body.classList.toggle("subpage-admin", isAdmin);
 
@@ -1015,15 +1065,19 @@ ebookUploadForm.addEventListener("submit", async event => {
   try {
     let ebookDataUrl = "";
     let ebookFileUrl = "";
+    let ebookStoragePath = "";
     let coverDataUrl = "";
     let coverFileUrl = "";
     const extension = getFileExtension(file.name);
     const isPdf = (file.type === "application/pdf" || extension === "pdf");
 
     if (cloudEnabled) {
-      ebookFileUrl = await uploadToStorage(file, "ebooks");
+      const ebookUploadResult = await uploadToStorage(file, "ebooks");
+      ebookFileUrl = ebookUploadResult?.publicUrl || "";
+      ebookStoragePath = ebookUploadResult?.storagePath || "";
       if (cover instanceof File && cover.name) {
-        coverFileUrl = await uploadToStorage(cover, "covers");
+        const coverUploadResult = await uploadToStorage(cover, "covers");
+        coverFileUrl = coverUploadResult?.publicUrl || "";
       }
     } else {
       [ebookDataUrl, coverDataUrl] = await Promise.all([readFileAsDataUrl(file), readFileAsDataUrl(cover)]);
@@ -1044,6 +1098,7 @@ ebookUploadForm.addEventListener("submit", async event => {
       summary,
       dataUrl: isPdf ? "" : ebookDataUrl,
       fileUrl: ebookFileUrl,
+      storagePath: ebookStoragePath || "",
       coverUrl: coverFileUrl || coverDataUrl,
       createdAt: new Date().toISOString()
     };
