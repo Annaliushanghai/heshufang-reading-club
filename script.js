@@ -8,6 +8,7 @@ const ADMIN_PASSCODE = "heshufang-admin";
 const SUPABASE_CONFIG = window.HE_SHUFANG_SUPABASE || { url: "", anonKey: "" };
 const SUPABASE_BUCKET = "ebooks";
 const CLOUD_STATE_FILE = "heshufang-state.json";
+const CLOUD_EBOOK_META_FILE = "heshufang-ebook-meta.json";
 const CLOUD_STATE_KEY = "__hsf_cloud_updated_at__";
 
 const articleForm = document.querySelector("#excerpt-form");
@@ -171,6 +172,25 @@ function buildCloudState() {
   };
 }
 
+function buildCloudEbookMeta(book) {
+  if (!book) return null;
+  return {
+    updatedAt: Date.now(),
+    book: {
+      id: book.id,
+      title: book.title || "",
+      leader: book.leader || "",
+      leaderIntro: book.leaderIntro || "",
+      summary: book.summary || "",
+      fileName: book.fileName || "",
+      type: book.type || "",
+      fileUrl: book.fileUrl || "",
+      coverUrl: book.coverUrl || "",
+      createdAt: book.createdAt || new Date().toISOString()
+    }
+  };
+}
+
 function applyCloudState(state) {
   if (!state || typeof state !== "object" || !Array.isArray(state.articles)) return;
   articles = state.articles;
@@ -227,6 +247,32 @@ async function pushCloudState(force = false) {
   } finally {
     cloudSyncing = false;
   }
+}
+
+async function pushCloudEbookMeta(book) {
+  if (!SUPABASE_CONFIG.url || !SUPABASE_CONFIG.anonKey || !book) return false;
+  const payload = buildCloudEbookMeta(book);
+  if (!payload) return false;
+  const res = await fetch(storageUploadUrl(CLOUD_EBOOK_META_FILE), {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_CONFIG.anonKey,
+      Authorization: `Bearer ${SUPABASE_CONFIG.anonKey}`,
+      "Content-Type": "application/json",
+      "x-upsert": "true"
+    },
+    body: JSON.stringify(payload)
+  });
+  return res.ok;
+}
+
+async function pullCloudEbookMeta() {
+  if (!SUPABASE_CONFIG.url) return null;
+  const res = await fetch(`${storagePublicUrl(CLOUD_EBOOK_META_FILE)}?t=${Date.now()}`, { cache: "no-store" });
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => null);
+  if (!data || typeof data !== "object" || !data.book) return null;
+  return data.book;
 }
 
 function queueCloudSync() {
@@ -542,6 +588,11 @@ ebookUploadForm.addEventListener("submit", async event => {
   ebooks = [book];
   saveJson(EBOOK_KEY, ebooks);
   pushCloudState(true);
+  try {
+    await pushCloudEbookMeta(book);
+  } catch (e) {
+    console.warn("ebook meta upload failed", e);
+  }
   ebookUploadStatus.textContent = `已上传：${file.name}（${mode}）`;
   ebookUploadForm.reset();
   renderReadingPlan();
@@ -597,6 +648,15 @@ async function bootstrapCloudSync() {
       localStorage.setItem(CLOUD_STATE_KEY, String(cloudUpdatedAt));
       applyCloudState(cloudState);
     }
+    if (!ebooks.length) {
+      const metaBook = await pullCloudEbookMeta();
+      if (metaBook) {
+        ebooks = [metaBook];
+        localStorage.setItem(EBOOK_KEY, JSON.stringify(ebooks));
+        renderReadingPlan();
+        renderEbooks();
+      }
+    }
     if (SUPABASE_CONFIG.anonKey) {
       if (!cloudState) {
         await pushCloudState(true);
@@ -609,6 +669,15 @@ async function bootstrapCloudSync() {
             cloudUpdatedAt = latestTime;
             localStorage.setItem(CLOUD_STATE_KEY, String(cloudUpdatedAt));
             applyCloudState(latest);
+          }
+          if (!ebooks.length) {
+            const latestBook = await pullCloudEbookMeta();
+            if (latestBook) {
+              ebooks = [latestBook];
+              localStorage.setItem(EBOOK_KEY, JSON.stringify(ebooks));
+              renderReadingPlan();
+              renderEbooks();
+            }
           }
         } catch {}
       }, 15000);
