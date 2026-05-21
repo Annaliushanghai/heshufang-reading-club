@@ -375,6 +375,28 @@ main {
   width: fit-content;
 }
 
+.reader-url-wrap {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.reader-url-wrap label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.reader-url-input {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--primary-dark);
+  background: #fff;
+}
+
 .ebook-text {
   min-height: 420px;
   max-height: 680px;
