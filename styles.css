@@ -123,7 +123,7 @@ main {
 .hero {
   min-height: 610px;
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: clamp(28px, 6vw, 76px);
   padding: 56px 0 44px;
@@ -175,6 +175,7 @@ main {
 }
 
 .hero-art {
+  display: none;
   position: relative;
   min-height: 450px;
   border: 1px solid var(--line);
@@ -977,6 +978,193 @@ textarea {
 .admin-panel {
   overflow-x: auto;
   padding: 0;
+}
+
+.admin-fab {
+  position: fixed;
+  right: 18px;
+  bottom: 22px;
+  z-index: 60;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  background: #0f766e;
+  color: #fff;
+  font-weight: 800;
+}
+
+.mine-fab {
+  position: fixed;
+  left: 18px;
+  bottom: 22px;
+  z-index: 60;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  background: #0f766e;
+  color: #fff;
+  font-weight: 800;
+}
+
+.mine-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 52;
+  background: rgba(8, 18, 18, 0.3);
+}
+
+.admin-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 54;
+  background: rgba(8, 18, 18, 0.35);
+}
+
+.admin-section {
+  display: none;
+}
+
+.mine-section {
+  display: none;
+}
+
+/* Subpage route mode: mine/admin only shown after clicking top menu hash links */
+body.subpage-mine main#home > *:not(#mine),
+body.subpage-admin main#home > *:not(#admin) {
+  display: none !important;
+}
+
+body.subpage-mine .mine-section,
+body.subpage-admin .admin-section {
+  display: block;
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  margin: 0 auto;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.subpage-mine .mine-section .section-head,
+body.subpage-admin .admin-section .section-head {
+  display: block;
+}
+
+/* Old floating entry removed */
+.mine-fab,
+.admin-fab,
+.mine-backdrop,
+.admin-backdrop {
+  display: none !important;
+}
+
+body.mine-open .mine-section {
+  display: block;
+  position: fixed;
+  inset: 58px 14px 14px;
+  z-index: 53;
+  margin: 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f6fbfb;
+  box-shadow: var(--shadow);
+}
+
+.mine-drawer-top {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #f6fbfb;
+  border-bottom: 1px solid var(--line);
+}
+
+.mine-submenu {
+  position: sticky;
+  top: 60px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f6fbfb;
+  border-bottom: 1px solid var(--line);
+}
+
+.mine-submenu .button {
+  min-height: 34px;
+  padding: 6px 12px;
+}
+
+.mine-submenu .is-active {
+  background: #0f766e;
+  color: #fff;
+}
+
+body.mine-open .mine-section .section-head {
+  display: none;
+}
+
+body.admin-open .admin-section {
+  display: block;
+  position: fixed;
+  inset: 58px 14px 14px;
+  z-index: 55;
+  margin: 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f6fbfb;
+  box-shadow: var(--shadow);
+}
+
+.admin-drawer-top {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #f6fbfb;
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-submenu {
+  position: sticky;
+  top: 60px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f6fbfb;
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-submenu .button {
+  min-height: 34px;
+  padding: 6px 12px;
+}
+
+.admin-submenu .is-active {
+  background: #0f766e;
+  color: #fff;
+}
+
+body.admin-open .admin-section .section-head {
+  display: none;
 }
 
 .admin-login {
