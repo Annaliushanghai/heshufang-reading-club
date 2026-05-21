@@ -7,6 +7,8 @@ const ADMIN_PASSCODE = "heshufang-admin";
 
 const SUPABASE_CONFIG = window.HE_SHUFANG_SUPABASE || { url: "", anonKey: "" };
 const SUPABASE_BUCKET = "ebooks";
+const CLOUD_STATE_FILE = "heshufang-state.json";
+const CLOUD_STATE_KEY = "__hsf_cloud_updated_at__";
 
 const articleForm = document.querySelector("#excerpt-form");
 const articleList = document.querySelector("#article-list");
@@ -45,12 +47,8 @@ const starterArticles = [
   }
 ];
 
-const starterUsers = [
-  { id: "u-1", name: "访客", phone: "未登记", createdAt: new Date().toISOString() }
-];
-
+const starterUsers = [{ id: "u-1", name: "访客", phone: "未登记", createdAt: new Date().toISOString() }];
 const starterEbooks = [];
-
 const defaultReadingPlan = {
   label: "6月共读",
   title: "《教学七律》",
@@ -58,7 +56,6 @@ const defaultReadingPlan = {
   description: "精炼揭示教学核心规律，以清晰原则指导实践。",
   weeks: ["第1周 · 1-3章", "第2周 · 4-6章", "第3周 · 7-9章", "第4周 · 分享会"]
 };
-
 const starterActivities = [
   { id: "ac-1", title: "欢迎加入禾书房读书会", detail: "每周更新共读计划", createdAt: new Date().toISOString() }
 ];
@@ -70,10 +67,6 @@ function loadJson(key, fallback) {
   } catch {
     return fallback;
   }
-}
-
-function saveJson(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
 }
 
 function createId(prefix) {
@@ -124,17 +117,20 @@ function sanitizeStorageFileName(fileName) {
   return `${safeBase}.${ext}`;
 }
 
-function getStoragePublicUrl(fileName) {
+function storagePublicUrl(path) {
   const root = (SUPABASE_CONFIG.url || "").replace(/\/+$/, "");
-  return `${root}/storage/v1/object/public/${SUPABASE_BUCKET}/${encodeURIComponent(fileName)}`;
+  return `${root}/storage/v1/object/public/${SUPABASE_BUCKET}/${encodeURIComponent(path)}`;
+}
+
+function storageUploadUrl(path) {
+  const root = (SUPABASE_CONFIG.url || "").replace(/\/+$/, "");
+  return `${root}/storage/v1/object/${SUPABASE_BUCKET}/${encodeURIComponent(path)}`;
 }
 
 async function uploadToSupabaseStorage(file) {
   if (!SUPABASE_CONFIG.url || !SUPABASE_CONFIG.anonKey) return null;
   const safeName = sanitizeStorageFileName(file.name || "ebook.pdf");
-  const endpoint = `${SUPABASE_CONFIG.url.replace(/\/+$/, "")}/storage/v1/object/${SUPABASE_BUCKET}/${encodeURIComponent(safeName)}`;
-
-  const response = await fetch(endpoint, {
+  const response = await fetch(storageUploadUrl(safeName), {
     method: "POST",
     headers: {
       apikey: SUPABASE_CONFIG.anonKey,
@@ -144,16 +140,11 @@ async function uploadToSupabaseStorage(file) {
     },
     body: file
   });
-
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    throw new Error(text || `Upload failed: ${response.status}`);
+    throw new Error(text || `upload failed: ${response.status}`);
   }
-
-  return {
-    storageName: safeName,
-    publicUrl: getStoragePublicUrl(safeName)
-  };
+  return { storageName: safeName, publicUrl: storagePublicUrl(safeName) };
 }
 
 let articles = loadJson(ARTICLE_KEY, starterArticles);
@@ -165,6 +156,89 @@ let adminAuthed = false;
 let adminPane = "login";
 let openEbookId = "";
 let cloudConnected = Boolean(SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey);
+let cloudUpdatedAt = Number(localStorage.getItem(CLOUD_STATE_KEY) || 0);
+let cloudSyncTimer = null;
+let cloudSyncing = false;
+
+function buildCloudState() {
+  return {
+    updatedAt: Date.now(),
+    articles,
+    users,
+    ebooks,
+    readingPlan,
+    activities
+  };
+}
+
+function applyCloudState(state) {
+  if (!state || typeof state !== "object" || !Array.isArray(state.articles)) return;
+  articles = state.articles;
+  users = Array.isArray(state.users) ? state.users : users;
+  ebooks = Array.isArray(state.ebooks) ? state.ebooks : ebooks;
+  readingPlan = state.readingPlan && typeof state.readingPlan === "object" ? state.readingPlan : readingPlan;
+  activities = Array.isArray(state.activities) ? state.activities : activities;
+
+  localStorage.setItem(ARTICLE_KEY, JSON.stringify(articles));
+  localStorage.setItem(USER_KEY, JSON.stringify(users));
+  localStorage.setItem(EBOOK_KEY, JSON.stringify(ebooks));
+  localStorage.setItem(READING_PLAN_KEY, JSON.stringify(readingPlan));
+  localStorage.setItem(ACTIVITY_KEY, JSON.stringify(activities));
+
+  renderReadingPlan();
+  renderActivities();
+  renderArticles();
+  renderEbooks();
+  renderReadingDetail();
+  renderAdminUsers();
+  renderAdminComments();
+}
+
+async function pullCloudState() {
+  if (!SUPABASE_CONFIG.url) return null;
+  const res = await fetch(`${storagePublicUrl(CLOUD_STATE_FILE)}?t=${Date.now()}`, { cache: "no-store" });
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+async function pushCloudState(force = false) {
+  if (!SUPABASE_CONFIG.url || !SUPABASE_CONFIG.anonKey || cloudSyncing) return;
+  cloudSyncing = true;
+  try {
+    const state = buildCloudState();
+    if (!force && state.updatedAt <= cloudUpdatedAt) return;
+    const res = await fetch(storageUploadUrl(CLOUD_STATE_FILE), {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_CONFIG.anonKey,
+        Authorization: `Bearer ${SUPABASE_CONFIG.anonKey}`,
+        "Content-Type": "application/json",
+        "x-upsert": "true"
+      },
+      body: JSON.stringify(state)
+    });
+    if (!res.ok) throw new Error(`state upload failed: ${res.status}`);
+    cloudUpdatedAt = state.updatedAt;
+    localStorage.setItem(CLOUD_STATE_KEY, String(cloudUpdatedAt));
+    cloudConnected = true;
+    renderEbooks();
+  } catch (e) {
+    console.warn(e);
+  } finally {
+    cloudSyncing = false;
+  }
+}
+
+function queueCloudSync() {
+  if (!SUPABASE_CONFIG.url || !SUPABASE_CONFIG.anonKey) return;
+  if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = setTimeout(() => pushCloudState(), 500);
+}
+
+function saveJson(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+  queueCloudSync();
+}
 
 function addActivity(title, detail) {
   activities.unshift({ id: createId("ac"), title, detail, createdAt: new Date().toISOString() });
@@ -197,7 +271,7 @@ function renderReadingPlan() {
       <h3>${escapeHtml(readingPlan.title)}</h3>
       <p>${escapeHtml(readingPlan.description)}</p>
       <div class="chapter-grid">
-        ${readingPlan.weeks.map((w, idx) => `<button type="button" data-open-week="${idx}">${escapeHtml(w)}</button>`).join("")}
+        ${readingPlan.weeks.map((w, i) => `<button type="button" data-open-week="${i}">${escapeHtml(w)}</button>`).join("")}
       </div>
     </div>
   `;
@@ -238,6 +312,7 @@ function renderArticles() {
       article.comments = article.comments || [];
       article.comments.push({ author, body });
       saveJson(ARTICLE_KEY, articles);
+      pushCloudState(true);
       addActivity(`${author} 发表了评论`, `《${article.title}》`);
       renderArticles();
       renderAdminComments();
@@ -276,17 +351,16 @@ async function openEbookReader(id) {
     renderEbooks();
     return;
   }
-
   ebookReaderTitle.textContent = book.title || "电子书阅读";
   const ext = getFileExtension(book.fileName);
-  const sourceUrl = book.fileUrl || (book.dataUrl || "");
+  const sourceUrl = book.fileUrl || book.dataUrl || "";
 
   if ((book.type || "").startsWith("text/") || ["txt", "md"].includes(ext)) {
-    if (book.dataUrl) {
+    if (!book.dataUrl) {
+      ebookReaderBody.innerHTML = `<p>文本未找到</p>`;
+    } else {
       const text = decodeURIComponent((book.dataUrl.split(",")[1] || ""));
       ebookReaderBody.innerHTML = `<pre class="ebook-text">${escapeHtml(text)}</pre>`;
-    } else {
-      ebookReaderBody.innerHTML = `<p>文本未找到</p>`;
     }
   } else if ((book.type || "") === "application/pdf" || ext === "pdf") {
     ebookReaderBody.innerHTML = `
@@ -335,8 +409,8 @@ function renderAdminComments() {
   }
   const rows = [];
   articles.forEach(article => {
-    (article.comments || []).forEach((comment, index) => {
-      rows.push({ articleId: article.id, commentIndex: index, title: article.title, author: comment.author, body: comment.body });
+    (article.comments || []).forEach((comment, i) => {
+      rows.push({ articleId: article.id, commentIndex: i, title: article.title, author: comment.author, body: comment.body });
     });
   });
   adminCommentList.innerHTML = rows.length ? rows.map(r => `
@@ -356,13 +430,11 @@ function setAdminPane(pane) {
   const showPlan = pane === "plan" && adminAuthed;
   const showUsers = pane === "users" && adminAuthed;
   const showComments = pane === "comments" && adminAuthed;
-
   adminLoginForm.hidden = !showLogin;
   ebookUploadForm.hidden = !showUpload;
   readingPlanForm.hidden = !showPlan;
   adminUserTable.hidden = !showUsers;
   adminCommentTable.hidden = !showComments;
-
   Array.from(adminSubmenu.querySelectorAll("[data-admin-pane]")).forEach(btn => {
     btn.classList.toggle("is-active", btn.getAttribute("data-admin-pane") === pane);
   });
@@ -370,15 +442,10 @@ function setAdminPane(pane) {
 
 function syncSubpageRoute() {
   const hash = (location.hash || "#home").replace("#", "");
-  const isMine = hash === "mine";
-  const isAdmin = hash === "admin";
-  const isMonthly = hash === "monthly";
-
-  document.body.classList.toggle("subpage-mine", isMine);
-  document.body.classList.toggle("subpage-admin", isAdmin);
-  document.body.classList.toggle("subpage-monthly", isMonthly);
-
-  if (isAdmin) setAdminPane(adminAuthed ? (adminPane === "login" ? "upload" : adminPane) : "login");
+  document.body.classList.toggle("subpage-mine", hash === "mine");
+  document.body.classList.toggle("subpage-admin", hash === "admin");
+  document.body.classList.toggle("subpage-monthly", hash === "monthly");
+  if (hash === "admin") setAdminPane(adminAuthed ? (adminPane === "login" ? "upload" : adminPane) : "login");
 }
 
 articleForm.addEventListener("submit", event => {
@@ -388,16 +455,9 @@ articleForm.addEventListener("submit", event => {
   const title = String(data.get("title") || "").trim();
   const body = String(data.get("body") || "").trim();
   if (!author || !title || !body) return;
-
-  articles.unshift({
-    id: createId("article"),
-    author,
-    title,
-    body,
-    createdAt: new Date().toISOString(),
-    comments: []
-  });
+  articles.unshift({ id: createId("article"), author, title, body, createdAt: new Date().toISOString(), comments: [] });
   saveJson(ARTICLE_KEY, articles);
+  pushCloudState(true);
   addActivity(`${author} 发布了笔记`, title);
   articleForm.reset();
   renderArticles();
@@ -413,10 +473,8 @@ monthlyEbookList.addEventListener("click", event => {
 
 currentBook.addEventListener("click", event => {
   const btn = event.target.closest("[data-open-week]");
-  if (!btn) return;
-  const firstBook = ebooks[0];
-  if (!firstBook) return;
-  openEbookReader(firstBook.id);
+  if (!btn || !ebooks[0]) return;
+  openEbookReader(ebooks[0].id);
   document.querySelector("#monthly-ebook-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
@@ -452,16 +510,16 @@ ebookUploadForm.addEventListener("submit", async event => {
   if (!(file instanceof File) || file.size === 0) return;
   const cover = data.get("cover");
 
-  let fileUrl = "";
-  let storageName = "";
+  let cloudFileUrl = "";
+  let cloudFileName = "";
   let mode = "本地";
   try {
     const uploaded = await uploadToSupabaseStorage(file);
     if (uploaded?.publicUrl) {
-      fileUrl = uploaded.publicUrl;
-      storageName = uploaded.storageName;
-      mode = "云端";
+      cloudFileUrl = uploaded.publicUrl;
+      cloudFileName = uploaded.storageName;
       cloudConnected = true;
+      mode = "云端";
     }
   } catch (e) {
     console.warn(e);
@@ -473,16 +531,17 @@ ebookUploadForm.addEventListener("submit", async event => {
     leader: String(data.get("leader") || "").trim(),
     leaderIntro: String(data.get("leaderIntro") || "").trim(),
     summary: String(data.get("summary") || "").trim(),
-    fileName: storageName || file.name,
+    fileName: cloudFileName || file.name,
     type: file.type || "application/octet-stream",
-    dataUrl: fileUrl ? "" : await readFileAsDataUrl(file),
-    fileUrl,
+    dataUrl: cloudFileUrl ? "" : await readFileAsDataUrl(file),
+    fileUrl: cloudFileUrl,
     coverUrl: (cover instanceof File && cover.size > 0) ? await readFileAsDataUrl(cover) : "",
     createdAt: new Date().toISOString()
   };
 
   ebooks = [book];
   saveJson(EBOOK_KEY, ebooks);
+  pushCloudState(true);
   ebookUploadStatus.textContent = `已上传：${file.name}（${mode}）`;
   ebookUploadForm.reset();
   renderReadingPlan();
@@ -501,6 +560,7 @@ readingPlanForm.addEventListener("submit", event => {
     weeks: [1, 2, 3, 4].map(i => String(data.get(`week${i}`) || "").trim())
   };
   saveJson(READING_PLAN_KEY, readingPlan);
+  pushCloudState(true);
   readingPlanStatus.textContent = "读书计划已保存。";
   renderReadingPlan();
 });
@@ -517,15 +577,44 @@ adminCommentList.addEventListener("click", event => {
   const articleId = btn.getAttribute("data-article-id");
   const index = Number(btn.getAttribute("data-comment-index"));
   const article = articles.find(a => a.id === articleId);
-  if (!article || !Array.isArray(article.comments)) return;
-  if (!Number.isInteger(index) || index < 0 || index >= article.comments.length) return;
+  if (!article || !Array.isArray(article.comments) || index < 0 || index >= article.comments.length) return;
   article.comments.splice(index, 1);
   saveJson(ARTICLE_KEY, articles);
+  pushCloudState(true);
   renderArticles();
   renderAdminComments();
 });
 
 window.addEventListener("hashchange", syncSubpageRoute);
+
+async function bootstrapCloudSync() {
+  if (!SUPABASE_CONFIG.url) return;
+  try {
+    const cloudState = await pullCloudState();
+    const cloudTime = Number(cloudState?.updatedAt || 0);
+    if (cloudState && cloudTime > cloudUpdatedAt) {
+      cloudUpdatedAt = cloudTime;
+      localStorage.setItem(CLOUD_STATE_KEY, String(cloudUpdatedAt));
+      applyCloudState(cloudState);
+    }
+    if (SUPABASE_CONFIG.anonKey) {
+      if (!cloudState) {
+        await pushCloudState(true);
+      }
+      setInterval(async () => {
+        try {
+          const latest = await pullCloudState();
+          const latestTime = Number(latest?.updatedAt || 0);
+          if (latest && latestTime > cloudUpdatedAt) {
+            cloudUpdatedAt = latestTime;
+            localStorage.setItem(CLOUD_STATE_KEY, String(cloudUpdatedAt));
+            applyCloudState(latest);
+          }
+        } catch {}
+      }, 15000);
+    }
+  } catch {}
+}
 
 function bootstrap() {
   renderReadingPlan();
@@ -537,6 +626,7 @@ function bootstrap() {
   renderAdminComments();
   setAdminPane("login");
   syncSubpageRoute();
+  bootstrapCloudSync();
 }
 
 bootstrap();
