@@ -387,7 +387,32 @@ function renderEbooks() {
   `;
 }
 
-async function openEbookReader(id) {
+function withPdfPage(url, page) {
+  if (!url || !page || Number(page) < 1) return url;
+  const clean = String(url).split("#")[0];
+  return `${clean}#page=${Number(page)}`;
+}
+
+function weekToPdfPage(weekIndex, weekText) {
+  if (weekIndex === 0) return 1;
+  if (weekIndex === 1) return 38;
+  if (weekIndex === 2) return 65;
+  const match = String(weekText || "").match(/(\d+)/);
+  if (match) return Math.max(1, Number(match[1]));
+  return Math.max(1, weekIndex + 1);
+}
+
+function isWechatBrowser() {
+  const ua = (navigator.userAgent || "").toLowerCase();
+  return ua.includes("micromessenger");
+}
+
+function isMobileDevice() {
+  const ua = (navigator.userAgent || "").toLowerCase();
+  return /iphone|ipad|ipod|android|mobile/.test(ua);
+}
+
+async function openEbookReader(id, options = {}) {
   const book = ebooks.find(item => item.id === id);
   if (!book) return;
   if (openEbookId === id && !ebookReader.hidden) {
@@ -400,6 +425,8 @@ async function openEbookReader(id) {
   ebookReaderTitle.textContent = book.title || "电子书阅读";
   const ext = getFileExtension(book.fileName);
   const sourceUrl = book.fileUrl || book.dataUrl || "";
+  const pdfPage = Number(options.pdfPage || 0);
+  const pdfUrl = withPdfPage(sourceUrl, pdfPage);
 
   if ((book.type || "").startsWith("text/") || ["txt", "md"].includes(ext)) {
     if (!book.dataUrl) {
@@ -409,11 +436,15 @@ async function openEbookReader(id) {
       ebookReaderBody.innerHTML = `<pre class="ebook-text">${escapeHtml(text)}</pre>`;
     }
   } else if ((book.type || "") === "application/pdf" || ext === "pdf") {
+    const wechatInlineOpen = isWechatBrowser() && isMobileDevice() && sourceUrl
+      ? `<button class="button secondary reader-open-link" type="button" data-open-pdf-self="${escapeHtml(pdfUrl || sourceUrl)}">微信内打开 PDF</button>`
+      : "";
     ebookReaderBody.innerHTML = `
       <div class="ebook-pdf-wrap">
-        ${sourceUrl ? `<iframe class="ebook-frame" src="${sourceUrl}" title="${escapeHtml(book.title)}"></iframe>` : `<div class="ebook-frame ebook-pdf-empty"><p style="padding:12px">PDF 未找到</p></div>`}
+        ${sourceUrl ? `<iframe class="ebook-frame" src="${escapeHtml(pdfUrl || sourceUrl)}" title="${escapeHtml(book.title)}"></iframe>` : `<div class="ebook-frame ebook-pdf-empty"><p style="padding:12px">PDF 未找到</p></div>`}
       </div>
       <p class="reader-inline-tip">请在当前页面直接滑动阅读</p>
+      ${wechatInlineOpen}
     `;
   } else {
     ebookReaderBody.innerHTML = "该文件暂不支持在当前页面预览";
@@ -520,7 +551,10 @@ monthlyEbookList.addEventListener("click", event => {
 currentBook.addEventListener("click", event => {
   const btn = event.target.closest("[data-open-week]");
   if (!btn || !ebooks[0]) return;
-  openEbookReader(ebooks[0].id);
+  const weekIndex = Number(btn.getAttribute("data-open-week"));
+  const weekText = (readingPlan.weeks && readingPlan.weeks[weekIndex]) || "";
+  const page = weekToPdfPage(weekIndex, weekText);
+  openEbookReader(ebooks[0].id, { pdfPage: page });
   document.querySelector("#monthly-ebook-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
