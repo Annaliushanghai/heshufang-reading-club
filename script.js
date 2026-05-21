@@ -174,7 +174,8 @@ async function uploadToStorage(file, folder = "ebooks") {
     body: file
   });
   if (!response.ok) {
-    throw new Error(`storage upload failed: ${response.status}`);
+    console.warn(`storage upload failed: ${response.status}`);
+    return "";
   }
   return getStoragePublicUrl(path);
 }
@@ -1041,7 +1042,38 @@ ebookUploadForm.addEventListener("submit", async event => {
     syncReadingPlanForm();
   } catch (error) {
     console.warn(error);
-    ebookUploadStatus.textContent = "上传失败：请先在 Supabase Storage 创建公开 bucket：ebooks，然后重试。";
+    const fallbackEbookDataUrl = await readFileAsDataUrl(file);
+    const fallbackCoverDataUrl = await readFileAsDataUrl(cover);
+    const fallbackUploadedEbook = {
+      id: createId("ebook"),
+      title,
+      leader,
+      leaderIntro,
+      fileName: file.name,
+      type: file.type || "application/octet-stream",
+      summary,
+      dataUrl: fallbackEbookDataUrl,
+      fileUrl: "",
+      coverUrl: fallbackCoverDataUrl,
+      createdAt: new Date().toISOString()
+    };
+    ebooks.unshift(fallbackUploadedEbook);
+    ebooks = ebooks.map((ebook, index) => index === 0 ? fallbackUploadedEbook : ebook);
+    readingPlan = {
+      ...readingPlan,
+      title,
+      coverText: title.slice(0, 4) || readingPlan.coverText,
+      coverUrl: fallbackCoverDataUrl || readingPlan.coverUrl || "",
+      description: summary || readingPlan.description
+    };
+    saveJson(EBOOK_KEY, ebooks);
+    saveJson(READING_PLAN_KEY, readingPlan);
+    ebookUploadForm.reset();
+    ebookUploadStatus.textContent = `已上传：${file.name}。云端暂不可用，已保存到当前设备。`;
+    renderReadingPlan();
+    renderReadingDetail();
+    renderEbooks();
+    syncReadingPlanForm();
   }
 }, true);
 
