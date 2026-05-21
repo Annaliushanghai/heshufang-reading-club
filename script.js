@@ -8,6 +8,7 @@ const SUPABASE_CONFIG = window.HE_SHUFANG_SUPABASE || { url: "", anonKey: "" };
 const SUPABASE_STATE_TABLE = "heshufang_state";
 const SUPABASE_STATE_ID = "global";
 const SUPABASE_STORAGE_BUCKET = "ebooks";
+const SUPABASE_STORAGE_BUCKET_FALLBACK = "EBOOKS";
 const cloudEnabled = Boolean(SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey);
 const hasSupabaseUrl = Boolean(SUPABASE_CONFIG.url);
 let cloudSyncTimer = null;
@@ -159,6 +160,10 @@ function getStoragePublicUrl(path) {
   return `${SUPABASE_CONFIG.url}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/${path}`;
 }
 
+function getStoragePublicUrlWithBucket(bucket, path) {
+  return `${SUPABASE_CONFIG.url}/storage/v1/object/public/${bucket}/${path}`;
+}
+
 function sanitizeStorageFileName(fileName) {
   const lastDot = fileName.lastIndexOf(".");
   const rawBase = lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
@@ -181,22 +186,25 @@ async function uploadToStorage(file, folder = "ebooks") {
   if (!cloudEnabled) return "";
   const safeName = sanitizeStorageFileName(file.name);
   const path = `${folder}/${Date.now()}-${Math.random().toString(16).slice(2)}-${safeName}`;
-  const url = `${SUPABASE_CONFIG.url}/storage/v1/object/${SUPABASE_STORAGE_BUCKET}/${path}`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_CONFIG.anonKey,
-      Authorization: `Bearer ${SUPABASE_CONFIG.anonKey}`,
-      "x-upsert": "true",
-      "Content-Type": file.type || "application/octet-stream"
-    },
-    body: file
-  });
-  if (!response.ok) {
-    console.warn(`storage upload failed: ${response.status}`);
-    return "";
+  const bucketCandidates = [SUPABASE_STORAGE_BUCKET, SUPABASE_STORAGE_BUCKET_FALLBACK];
+  for (const bucket of bucketCandidates) {
+    const url = `${SUPABASE_CONFIG.url}/storage/v1/object/${bucket}/${path}`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_CONFIG.anonKey,
+        Authorization: `Bearer ${SUPABASE_CONFIG.anonKey}`,
+        "x-upsert": "true",
+        "Content-Type": file.type || "application/octet-stream"
+      },
+      body: file
+    });
+    if (response.ok) {
+      return { publicUrl: getStoragePublicUrlWithBucket(bucket, path), storagePath: path, bucket };
+    }
+    console.warn(`storage upload failed on bucket ${bucket}: ${response.status}`);
   }
-  return { publicUrl: getStoragePublicUrl(path), storagePath: path };
+  return "";
 }
 
 function getCurrentState() {
@@ -540,13 +548,20 @@ function getEbookUrlCandidates(ebook) {
   if (!ebook) return [];
   const candidates = [];
   if (ebook.fileUrl) candidates.push(ebook.fileUrl);
-  if (hasSupabaseUrl && ebook.storagePath) candidates.push(getStoragePublicUrl(ebook.storagePath));
+  if (hasSupabaseUrl && ebook.storagePath) {
+    candidates.push(getStoragePublicUrl(ebook.storagePath));
+    candidates.push(getStoragePublicUrlWithBucket(SUPABASE_STORAGE_BUCKET_FALLBACK, ebook.storagePath));
+  }
   if (hasSupabaseUrl && ebook.fileName) {
     const safeName = sanitizeStorageFileName(ebook.fileName);
     candidates.push(getStoragePublicUrl(`ebooks/${safeName}`));
     candidates.push(getStoragePublicUrl(safeName));
     candidates.push(getStoragePublicUrl(`ebooks/${ebook.fileName}`));
     candidates.push(getStoragePublicUrl(ebook.fileName));
+    candidates.push(getStoragePublicUrlWithBucket(SUPABASE_STORAGE_BUCKET_FALLBACK, `ebooks/${safeName}`));
+    candidates.push(getStoragePublicUrlWithBucket(SUPABASE_STORAGE_BUCKET_FALLBACK, safeName));
+    candidates.push(getStoragePublicUrlWithBucket(SUPABASE_STORAGE_BUCKET_FALLBACK, `ebooks/${ebook.fileName}`));
+    candidates.push(getStoragePublicUrlWithBucket(SUPABASE_STORAGE_BUCKET_FALLBACK, ebook.fileName));
   }
   return [...new Set(candidates.filter(Boolean))];
 }
