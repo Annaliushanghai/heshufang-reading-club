@@ -413,10 +413,10 @@ async function openEbookReader(id) {
       <div class="ebook-pdf-wrap">
         ${sourceUrl ? `<iframe class="ebook-frame" src="${sourceUrl}" title="${escapeHtml(book.title)}"></iframe>` : `<div class="ebook-frame ebook-pdf-empty"><p style="padding:12px">PDF 未找到</p></div>`}
       </div>
-      ${sourceUrl ? `<a class="button secondary reader-open-link" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">新窗口打开 PDF</a>` : ""}
+      <p class="reader-inline-tip">请在当前页面直接滑动阅读</p>
     `;
   } else {
-    ebookReaderBody.innerHTML = sourceUrl ? `<a class="button secondary" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">打开文件</a>` : "无法预览此文件";
+    ebookReaderBody.innerHTML = "该文件暂不支持在当前页面预览";
   }
 
   ebookReader.hidden = false;
