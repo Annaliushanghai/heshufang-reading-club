@@ -565,6 +565,14 @@ ebookReaderClose.addEventListener("click", () => {
   renderEbooks();
 });
 
+ebookReaderBody.addEventListener("click", event => {
+  const btn = event.target.closest("[data-open-pdf-self]");
+  if (!btn) return;
+  const url = btn.getAttribute("data-open-pdf-self");
+  if (!url) return;
+  window.location.href = url;
+});
+
 adminLoginForm.addEventListener("submit", event => {
   event.preventDefault();
   const passcode = String(new FormData(adminLoginForm).get("passcode") || "").trim();
