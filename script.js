@@ -403,6 +403,11 @@ function isMobileLike() {
   return /Android|iPhone|iPad|iPod|Mobile|MicroMessenger/i.test(ua);
 }
 
+function isWeChat() {
+  const ua = navigator.userAgent || "";
+  return /MicroMessenger/i.test(ua);
+}
+
 function saveActivities() {
   saveJson(ACTIVITY_KEY, activities.slice(0, 12));
 }
@@ -716,6 +721,25 @@ async function openEbookReader(ebookId) {
     const frameUrl = sourceUrl || currentReaderBlobUrl;
     if (!ebook.dataUrl && sourceUrl) currentReaderBlobUrl = sourceUrl;
     const mobileLike = isMobileLike();
+    const wechat = isWeChat();
+    if (wechat && frameUrl) {
+      ebookReaderBody.innerHTML = `
+        <p class="reader-tip">微信内置浏览器不稳定时，请点击下方按钮使用微信原生 PDF 阅读器。</p>
+        <div class="reader-fallback">
+          <strong>已加载 PDF 链接</strong>
+          <p>在微信内建议使用“当前窗口打开 PDF”，可获得更稳定的翻页和缩放体验。</p>
+          <div class="reader-actions">
+            <a class="button primary" href="${frameUrl}" target="_self" rel="noopener noreferrer">当前窗口打开 PDF</a>
+            <a class="button secondary" href="${frameUrl}" target="_blank" rel="noopener noreferrer">新窗口打开 PDF</a>
+          </div>
+        </div>
+      `;
+      ebookReader.hidden = false;
+      openEbookId = ebookId;
+      renderEbooks();
+      ebookReader.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
     ebookReaderBody.innerHTML = `
       <p class="reader-tip">如果下方 PDF 区域空白，请点击“新窗口打开 PDF”。</p>
       <div class="ebook-pdf-wrap"></div>
