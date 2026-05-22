@@ -1,4 +1,4 @@
-const ARTICLE_KEY = "heBookroomArticlesV2";
+﻿const ARTICLE_KEY = "heBookroomArticlesV2";
 const USER_KEY = "heBookroomUsersV2";
 const EBOOK_KEY = "heBookroomEbooksV1";
 const READING_PLAN_KEY = "heBookroomReadingPlanV1";
@@ -58,7 +58,7 @@ const defaultReadingPlan = {
   weeks: ["第1周 · 1-3章", "第2周 · 4-6章", "第3周 · 7-9章", "第4周 · 分享会"]
 };
 const starterActivities = [
-  { id: "ac-1", title: "欢迎加入禾书房读书会", detail: "每周更新共读计划", createdAt: new Date().toISOString() }
+  { id: "ac-1", title: "娆㈣繋鍔犲叆绂句功鎴胯涔︿細", detail: "姣忓懆鏇存柊鍏辫璁″垝", createdAt: new Date().toISOString() }
 ];
 
 function loadJson(key, fallback) {
@@ -297,7 +297,7 @@ function renderActivities() {
   activityList.innerHTML = activities.map(a => `
     <article class="activity-item">
       <strong>${escapeHtml(a.title)}</strong>
-      <span>${escapeHtml(a.detail)} · ${formatDate(a.createdAt)}</span>
+      <span>${escapeHtml(a.detail)} 路 ${formatDate(a.createdAt)}</span>
     </article>
   `).join("");
 }
@@ -307,7 +307,7 @@ function renderReadingPlan() {
   const coverUrl = currentEbook?.coverUrl || "";
   const coverTitle = currentEbook?.title || readingPlan.title;
   const coverHtml = coverUrl
-    ? `<div class="cover image-cover"><img src="${coverUrl}" alt="${escapeHtml(coverTitle)}封面" /></div>`
+    ? `<div class="cover image-cover"><img src="${coverUrl}" alt="${escapeHtml(coverTitle)}灏侀潰" /></div>`
     : `<div class="cover">${formatCoverText(readingPlan.coverText)}</div>`;
 
   currentBook.innerHTML = `
@@ -326,13 +326,13 @@ function renderReadingPlan() {
 function renderComments(target, comments) {
   target.innerHTML = "";
   if (!comments.length) {
-    target.innerHTML = `<p class="comment-item">还没有评论，欢迎写下第一条回应。</p>`;
+    target.innerHTML = `<p class="comment-item">杩樻病鏈夎瘎璁猴紝娆㈣繋鍐欎笅绗竴鏉″洖搴斻€?/p>`;
     return;
   }
   comments.forEach(comment => {
     const item = document.createElement("p");
     item.className = "comment-item";
-    item.innerHTML = `<strong>${escapeHtml(comment.author)}</strong>：<span>${escapeHtml(comment.body)}</span>`;
+    item.innerHTML = `<strong>${escapeHtml(comment.author)}</strong>锛?span>${escapeHtml(comment.body)}</span>`;
     target.append(item);
   });
 }
@@ -441,16 +441,22 @@ async function openEbookReader(id, options = {}) {
       ebookReaderBody.innerHTML = `<pre class="ebook-text">${escapeHtml(text)}</pre>`;
     }
   } else if ((book.type || "") === "application/pdf" || ext === "pdf") {
-    const wechatInlineOpen = isWechatBrowser() && isMobileDevice() && sourceUrl
-      ? `<button class="button secondary reader-open-link" type="button" data-open-pdf-self="${escapeHtml(pdfUrl || sourceUrl)}">微信内打开 PDF</button>`
-      : "";
-    ebookReaderBody.innerHTML = `
-      <div class="ebook-pdf-wrap">
-        ${sourceUrl ? `<iframe class="ebook-frame" src="${escapeHtml(pdfUrl || sourceUrl)}" title="${escapeHtml(book.title)}"></iframe>` : `<div class="ebook-frame ebook-pdf-empty"><p style="padding:12px">PDF 未找到</p></div>`}
-      </div>
-      <p class="reader-inline-tip">请在当前页面直接滑动阅读</p>
-      ${wechatInlineOpen}
-    `;
+    const wechatMobile = isWechatBrowser() && isMobileDevice() && sourceUrl;
+    if (wechatMobile) {
+      ebookReaderBody.innerHTML = `
+        <div class="ebook-pdf-wrap ebook-pdf-empty">
+          <p style="padding:12px;margin:0 0 10px;">微信内请使用专用阅读页（不跳系统浏览器）</p>
+          <button class="button secondary reader-open-link" type="button" data-open-pdf-self="${escapeHtml(pdfUrl || sourceUrl)}">进入微信内PDF阅读页</button>
+        </div>
+      `;
+    } else {
+      ebookReaderBody.innerHTML = `
+        <div class="ebook-pdf-wrap">
+          ${sourceUrl ? `<iframe class="ebook-frame" src="${escapeHtml(pdfUrl || sourceUrl)}" title="${escapeHtml(book.title)}"></iframe>` : `<div class="ebook-frame ebook-pdf-empty"><p style="padding:12px">PDF 未找到</p></div>`}
+        </div>
+        <p class="reader-inline-tip">请在当前页面直接滑动阅读</p>
+      `;
+    }
   } else {
     ebookReaderBody.innerHTML = "该文件暂不支持在当前页面预览";
   }
@@ -459,16 +465,15 @@ async function openEbookReader(id, options = {}) {
   openEbookId = id;
   renderEbooks();
 }
-
 function renderReadingDetail() {
   const notes = articles.map(a => a.title);
   readingDetail.innerHTML = `
     <div>
-      <h3>我的已读</h3>
-      <ul class="mini-list"><li>《教学七律》</li><li>《失落的学艺》</li></ul>
+      <h3>鎴戠殑宸茶</h3>
+      <ul class="mini-list"><li>銆婃暀瀛︿竷寰嬨€?/li><li>銆婂け钀界殑瀛﹁壓銆?/li></ul>
     </div>
     <div>
-      <h3>我的书摘</h3>
+      <h3>鎴戠殑涔︽憳</h3>
       <ul class="mini-list">${notes.map(n => `<li>${escapeHtml(n)}</li>`).join("")}</ul>
     </div>
   `;
@@ -481,7 +486,7 @@ function renderAdminUsers() {
   }
   adminUserList.innerHTML = users.map(u => `
     <tr><td>${escapeHtml(u.name)}</td><td>${escapeHtml(u.phone)}</td><td>${formatDate(u.createdAt)}</td></tr>
-  `).join("") || `<tr><td colspan="3">暂无用户</td></tr>`;
+  `).join("") || `<tr><td colspan="3">鏆傛棤鐢ㄦ埛</td></tr>`;
 }
 
 function renderAdminComments() {
@@ -500,9 +505,9 @@ function renderAdminComments() {
       <td>${escapeHtml(r.title)}</td>
       <td>${escapeHtml(r.author)}</td>
       <td>${escapeHtml(r.body)}</td>
-      <td><button class="button secondary" type="button" data-delete-comment="1" data-article-id="${escapeHtml(r.articleId)}" data-comment-index="${r.commentIndex}">删除</button></td>
+      <td><button class="button secondary" type="button" data-delete-comment="1" data-article-id="${escapeHtml(r.articleId)}" data-comment-index="${r.commentIndex}">鍒犻櫎</button></td>
     </tr>
-  `).join("") : `<tr><td colspan="4">暂无评论</td></tr>`;
+  `).join("") : `<tr><td colspan="4">鏆傛棤璇勮</td></tr>`;
 }
 
 function setAdminPane(pane) {
@@ -746,3 +751,4 @@ function bootstrap() {
 }
 
 bootstrap();
+
