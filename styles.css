@@ -315,6 +315,71 @@ main {
   border-radius: 6px;
   padding: 14px;
   background: #f5fbfa;
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.ebook-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 220px);
+  gap: 14px;
+  align-items: center;
+}
+
+.ebook-leader-box {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.leader-avatar {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #eef3f2;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  border: 1px solid #e2eceb;
+}
+
+.leader-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.leader-intro {
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  max-width: 10em;
+  margin: 0 auto;
+}
+
+.leader-intro span {
+  display: block;
+  width: 100%;
+}
+
+.ebook-book-box {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+}
+
+.ebook-title {
+  font-size: 34px;
+  line-height: 1.1;
 }
 
 .ebook-item span {
@@ -744,17 +809,41 @@ textarea {
 
 .comment-form {
   display: grid;
-  grid-template-columns: 130px minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.comment-trigger {
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7fbfb;
+  color: var(--muted);
+  text-align: left;
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+.comment-input-row {
+  display: none;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
 }
 
-.comment-form input,
-.comment-form button {
-  height: 42px;
+.comment-form.is-open .comment-input-row {
+  display: grid;
 }
 
-.comment-form input {
+.comment-form.is-open .comment-trigger {
+  display: none;
+}
+
+.comment-input-row input,
+.comment-input-row button {
+  height: 40px;
+}
+
+.comment-input-row input {
   padding-block: 8px;
 }
 
@@ -1225,6 +1314,19 @@ body.admin-open .admin-section {
   border-bottom: 1px solid var(--line);
 }
 
+.admin-drawer-top strong {
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.admin-drawer-top .admin-close-btn {
+  min-height: 32px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .admin-submenu {
   position: sticky;
   top: 60px;
@@ -1240,6 +1342,8 @@ body.admin-open .admin-section {
 .admin-submenu .button {
   min-height: 34px;
   padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .admin-submenu .is-active {
@@ -1312,14 +1416,9 @@ th {
     grid-template-columns: 1fr;
   }
 
-  .comment-form {
+  .comment-input-row {
     grid-template-columns: 1fr;
     gap: 6px;
-  }
-
-  .comment-form input,
-  .comment-form button {
-    height: 40px;
   }
 }
 
@@ -1346,6 +1445,30 @@ th {
     width: 100%;
   }
 
+  .admin-drawer-top .admin-close-btn,
+  .admin-submenu .button {
+    width: auto;
+    min-height: 30px;
+    padding: 5px 10px;
+    font-size: 13px;
+    border-radius: 999px;
+  }
+
+  .admin-drawer-top {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .admin-drawer-top strong {
+    font-size: 16px;
+  }
+
+  .admin-submenu {
+    top: 48px;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
   .chapter-grid,
   .plan-fields,
   .medal-list,
@@ -1360,8 +1483,6 @@ th {
   }
 
   #monthly-ebook-panel .ebook-item {
-    flex-direction: column;
-    align-items: flex-start;
     gap: 10px;
   }
 
@@ -1372,6 +1493,19 @@ th {
     padding: 7px 12px;
     font-size: 15px;
     line-height: 1.2;
+  }
+
+  #monthly-ebook-panel .ebook-main {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  #monthly-ebook-panel .ebook-book-box {
+    justify-items: start;
+  }
+
+  #monthly-ebook-panel .ebook-title {
+    font-size: 38px;
   }
 
   #monthly-ebook-panel .reader-head {
