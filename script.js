@@ -326,13 +326,26 @@ function renderReadingPlan() {
 function renderComments(target, comments) {
   target.innerHTML = "";
   if (!comments.length) {
-    target.innerHTML = `<p class="comment-item">杩樻病鏈夎瘎璁猴紝娆㈣繋鍐欎笅绗竴鏉″洖搴斻€?/p>`;
+    target.innerHTML = `<p class="comment-item">还没有评论，欢迎写下第一条回应。</p>`;
     return;
   }
+
+  const normalizeCommentText = (value) => {
+    const text = String(value || "").replace(/<\/?p>/gi, "").trim();
+    if (!text) return "";
+    const mojibakePattern = /[锛銆鏈鍙鎴璇鐢靛瓙闃呰]/;
+    const hasCjk = /[\u4e00-\u9fa5]/.test(text);
+    if (mojibakePattern.test(text) && !hasCjk) return "该评论内容编码异常，已隐藏";
+    if (text.includes("?/p>") || text.includes("�")) return "该评论内容编码异常，已隐藏";
+    return text;
+  };
+
   comments.forEach(comment => {
     const item = document.createElement("p");
     item.className = "comment-item";
-    item.innerHTML = `<strong>${escapeHtml(comment.author)}</strong>锛?span>${escapeHtml(comment.body)}</span>`;
+    const safeAuthor = escapeHtml(String(comment.author || "访客"));
+    const safeBody = escapeHtml(normalizeCommentText(comment.body));
+    item.innerHTML = `<strong>${safeAuthor}</strong>：<span>${safeBody}</span>`;
     target.append(item);
   });
 }
