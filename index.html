@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>禾书房 | 读书会</title>
   <meta name="description" content="禾书房读书会：当月在读、发表笔记、社群活动、我的读书、管理后台。" />
-  <link rel="stylesheet" href="styles.css?v=20260521-recover1" />
+  <link rel="stylesheet" href="styles.css?v=20260522-utf8fix1" />
 </head>
 <body>
   <header class="site-header">
@@ -113,7 +113,7 @@
         <article class="panel event-card">
           <time>加入我们</time>
           <p>电话：13482202207（同微信）</p>
-          <p>地址：上海市黄浦区南苏州路1295号107室 禾鱼艺术工作室</p>
+          <p>线下地址：上海市黄浦区南苏州路1295号107室 禾鱼艺术工作室</p>
           <p>地铁1号线新闸路1号出口步行10分钟</p>
         </article>
       </div>
@@ -160,6 +160,7 @@
           <h3>上传当月电子书</h3>
           <label>电子书名称<input name="title" type="text" required /></label>
           <label>领读者<input name="leader" type="text" required /></label>
+          <label>领读者头像<input name="leaderAvatar" type="file" accept="image/*" /></label>
           <label>领读者介绍<textarea name="leaderIntro" rows="2" required></textarea></label>
           <label>电子书文件<input name="ebook" type="file" accept=".pdf,.txt,.md,.html,.htm" required /></label>
           <label>电子书封面<input name="cover" type="file" accept="image/*" /></label>
@@ -213,9 +214,11 @@
         <h4>评论</h4>
         <div class="comment-list"></div>
         <form class="comment-form">
-          <input name="author" type="text" placeholder="昵称" required />
-          <input name="body" type="text" placeholder="写下你的评论" required />
-          <button class="button secondary" type="submit">评论</button>
+          <button type="button" class="comment-trigger" data-comment-toggle>写评论...</button>
+          <div class="comment-input-row">
+            <input name="body" type="text" placeholder="写下你的评论" />
+            <button class="button secondary" type="submit">发送</button>
+          </div>
         </form>
       </div>
     </article>
@@ -259,7 +262,7 @@
       syncHashRoute();
     })();
   </script>
-  <script src="supabase-config.js?v=20260521-routefix2"></script>
-  <script src="script.js?v=20260521-routefix2"></script>
+  <script src="supabase-config.js?v=20260522-myreadingfix1"></script>
+  <script src="script.js?v=20260522-utf8fix1"></script>
 </body>
 </html>
