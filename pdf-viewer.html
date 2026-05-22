@@ -2,10 +2,9 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>禾书房 | PDF阅读</title>
   <style>
-    :root { color-scheme: light; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -20,7 +19,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 12px;
+      padding: 10px 12px calc(10px + env(safe-area-inset-top));
       background: rgba(238, 246, 246, 0.96);
       border-bottom: 1px solid #bdd6d6;
       backdrop-filter: blur(6px);
@@ -35,22 +34,46 @@
       font-weight: 600;
     }
     .title {
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 700;
-      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      white-space: nowrap;
     }
-    .wrap {
-      height: calc(100vh - 56px);
+    .tip {
+      padding: 8px 12px;
+      color: #3b6061;
+      font-size: 13px;
+    }
+    .pages {
       padding: 8px;
+      display: grid;
+      gap: 10px;
     }
-    iframe {
+    .page {
       width: 100%;
-      height: 100%;
+      background: #fff;
       border: 1px solid #bdd6d6;
       border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      touch-action: pan-y pinch-zoom;
+    }
+    .msg {
+      margin: 24px auto;
+      width: min(680px, 92vw);
       background: #fff;
+      border: 1px solid #bdd6d6;
+      border-radius: 8px;
+      padding: 14px;
+      color: #184d4f;
+      font-size: 14px;
+      line-height: 1.6;
     }
   </style>
 </head>
@@ -59,17 +82,66 @@
     <button class="btn" type="button" id="backBtn">返回主页</button>
     <div class="title">微信内PDF阅读</div>
   </div>
-  <div class="wrap">
-    <iframe id="pdfFrame" title="PDF阅读器" loading="eager"></iframe>
-  </div>
-  <script>
+  <div class="tip">向下滑动连续阅读；双指可缩放。</div>
+  <div class="pages" id="pages"></div>
+  <div class="msg" id="msg" hidden></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.mjs" type="module"></script>
+  <script type="module">
+    import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.mjs";
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs";
+
     const params = new URLSearchParams(location.search);
     const src = params.get("src") || "";
-    const frame = document.getElementById("pdfFrame");
-    if (src) frame.src = src;
+    const pagesEl = document.getElementById("pages");
+    const msgEl = document.getElementById("msg");
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+    function showMsg(text) {
+      msgEl.hidden = false;
+      msgEl.textContent = text;
+    }
+
+    async function renderPdf() {
+      if (!src) {
+        showMsg("未找到PDF链接。");
+        return;
+      }
+      try {
+        const loadingTask = pdfjsLib.getDocument({ url: src, withCredentials: false });
+        const pdf = await loadingTask.promise;
+        for (let p = 1; p <= pdf.numPages; p += 1) {
+          const page = await pdf.getPage(p);
+          const base = page.getViewport({ scale: 1 });
+          const targetWidth = Math.min(window.innerWidth - 24, 900);
+          const scale = targetWidth / base.width;
+          const viewport = page.getViewport({ scale });
+
+          const wrap = document.createElement("div");
+          wrap.className = "page";
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d", { alpha: false });
+          canvas.width = Math.floor(viewport.width * dpr);
+          canvas.height = Math.floor(viewport.height * dpr);
+          canvas.style.width = `${Math.floor(viewport.width)}px`;
+          canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+          const transform = dpr === 1 ? null : [dpr, 0, 0, dpr, 0, 0];
+          await page.render({ canvasContext: ctx, viewport, transform }).promise;
+          wrap.appendChild(canvas);
+          pagesEl.appendChild(wrap);
+        }
+      } catch (err) {
+        console.error(err);
+        showMsg("PDF加载失败。请联系管理员检查文件是否可公开访问。");
+      }
+    }
+
     document.getElementById("backBtn").addEventListener("click", () => {
       location.href = "/index.html#monthly";
     });
+
+    renderPdf();
   </script>
 </body>
 </html>
