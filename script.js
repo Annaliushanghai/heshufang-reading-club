@@ -58,7 +58,7 @@ const defaultReadingPlan = {
   weeks: ["第1周 · 1-3章", "第2周 · 4-6章", "第3周 · 7-9章", "第4周 · 分享会"]
 };
 const starterActivities = [
-  { id: "ac-1", title: "娆㈣繋鍔犲叆绂句功鎴胯涔︿細", detail: "姣忓懆鏇存柊鍏辫璁″垝", createdAt: new Date().toISOString() }
+  { id: "ac-1", title: "欢迎加入禾书房读书会", detail: "每周更新共读计划", createdAt: new Date().toISOString() }
 ];
 
 function loadJson(key, fallback) {
@@ -86,6 +86,22 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function looksLikeMojibake(text) {
+  const value = String(text || "");
+  if (!value) return false;
+  if (/[�□]/.test(value)) return true;
+  if (/<\/?[a-z][^>]*>/i.test(value) || /\/li>|\/p>|&[a-z]+;/i.test(value)) return true;
+  const markers = value.match(/[鈥锟銆鍙璇闂閿]/g);
+  return Boolean(markers && markers.length >= 2);
+}
+
+function cleanUserText(value) {
+  const text = String(value || "").replace(/<\/?[^>]+>/g, "").trim();
+  if (!text) return "";
+  if (looksLikeMojibake(text)) return "";
+  return text;
 }
 
 function formatCoverText(value) {
@@ -180,6 +196,7 @@ function buildCloudEbookMeta(book) {
       id: book.id,
       title: book.title || "",
       leader: book.leader || "",
+      leaderAvatarUrl: book.leaderAvatarUrl || "",
       leaderIntro: book.leaderIntro || "",
       summary: book.summary || "",
       fileName: book.fileName || "",
@@ -291,9 +308,11 @@ function addActivity(title, detail) {
   activities = activities.slice(0, 8);
   saveJson(ACTIVITY_KEY, activities);
   renderActivities();
+  pushCloudState(true);
 }
 
 function renderActivities() {
+  activities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   activityList.innerHTML = activities.map(a => `
     <article class="activity-item">
       <strong>${escapeHtml(a.title)}</strong>
@@ -360,19 +379,28 @@ function renderArticles() {
     node.querySelector(".article-body").textContent = article.body;
     const commentsNode = node.querySelector(".comment-list");
     const form = node.querySelector(".comment-form");
+    const toggleBtn = node.querySelector("[data-comment-toggle]");
+    const bodyInput = form.querySelector("input[name='body']");
     renderComments(commentsNode, article.comments || []);
+
+    toggleBtn?.addEventListener("click", () => {
+      form.classList.add("is-open");
+      bodyInput?.focus();
+    });
 
     form.addEventListener("submit", event => {
       event.preventDefault();
       const data = new FormData(form);
-      const author = String(data.get("author") || "").trim();
       const body = String(data.get("body") || "").trim();
-      if (!author || !body) return;
+      const author = "读者";
+      if (!body) return;
       article.comments = article.comments || [];
       article.comments.push({ author, body });
       saveJson(ARTICLE_KEY, articles);
       pushCloudState(true);
       addActivity(`${author} 发表了评论`, `《${article.title}》`);
+      form.reset();
+      form.classList.remove("is-open");
       renderArticles();
       renderAdminComments();
     });
@@ -388,14 +416,31 @@ function renderEbooks() {
     return;
   }
   const book = ebooks[0];
+  const leaderName = String(book.leader || "领读者").trim();
+  const leaderAvatarText = escapeHtml((leaderName[0] || "读").toUpperCase());
+  const leaderAvatarNode = book.leaderAvatarUrl
+    ? `<img src="${escapeHtml(book.leaderAvatarUrl)}" alt="${escapeHtml(leaderName)}" loading="lazy" />`
+    : leaderAvatarText;
+  const introSegments = String(book.leaderIntro || "领读者介绍")
+    .split(/[，,。；;、\n\r]+/g)
+    .map(s => s.trim())
+    .filter(Boolean);
+  const leaderIntroHtml = introSegments.length
+    ? introSegments.map(item => `<span>${escapeHtml(item)}</span>`).join("")
+    : `<span>领读者介绍</span>`;
   monthlyEbookList.innerHTML = `
     <article class="ebook-item">
-      <div>
-        <strong>${escapeHtml(book.title)}</strong>
-        <p class="ebook-leader">领读者：${escapeHtml(book.leader || "XXX")}</p>
-        <p>${escapeHtml(book.leaderIntro || "")}</p>
+      <p class="ebook-leader">领读者：${escapeHtml(leaderName)}</p>
+      <div class="ebook-main">
+        <div class="ebook-leader-box">
+          <div class="leader-avatar">${leaderAvatarNode}</div>
+          <p class="leader-intro">${leaderIntroHtml}</p>
+        </div>
+        <div class="ebook-book-box">
+          <strong class="ebook-title">${escapeHtml(book.title)}</strong>
+          <button class="button secondary" type="button" data-open-ebook="${escapeHtml(book.id)}">${openEbookId === book.id ? "收起阅读" : "打开阅读"}</button>
+        </div>
       </div>
-      <button class="button secondary" type="button" data-open-ebook="${escapeHtml(book.id)}">${openEbookId === book.id ? "收起阅读" : "打开阅读"}</button>
     </article>
   `;
 }
@@ -479,15 +524,18 @@ async function openEbookReader(id, options = {}) {
   renderEbooks();
 }
 function renderReadingDetail() {
-  const notes = articles.map(a => a.title);
+  const notes = articles
+    .map(a => cleanUserText(a.title))
+    .filter(Boolean);
+
   readingDetail.innerHTML = `
     <div>
-      <h3>鎴戠殑宸茶</h3>
-      <ul class="mini-list"><li>銆婃暀瀛︿竷寰嬨€?/li><li>銆婂け钀界殑瀛﹁壓銆?/li></ul>
+      <h3>我的已读</h3>
+      <ul class="mini-list"><li>《教学七律》</li><li>《失落的学艺》</li></ul>
     </div>
     <div>
-      <h3>鎴戠殑涔︽憳</h3>
-      <ul class="mini-list">${notes.map(n => `<li>${escapeHtml(n)}</li>`).join("")}</ul>
+      <h3>我的笔记</h3>
+      <ul class="mini-list">${notes.length ? notes.map(n => `<li>${escapeHtml(n)}</li>`).join("") : "<li>暂时还没有笔记</li>"}</ul>
     </div>
   `;
 }
@@ -620,6 +668,7 @@ ebookUploadForm.addEventListener("submit", async event => {
   const file = data.get("ebook");
   if (!(file instanceof File) || file.size === 0) return;
   const cover = data.get("cover");
+  const leaderAvatar = data.get("leaderAvatar");
 
   let cloudFileUrl = "";
   let cloudFileName = "";
@@ -640,6 +689,7 @@ ebookUploadForm.addEventListener("submit", async event => {
     id: createId("ebook"),
     title: String(data.get("title") || "").trim(),
     leader: String(data.get("leader") || "").trim(),
+    leaderAvatarUrl: (leaderAvatar instanceof File && leaderAvatar.size > 0) ? await readFileAsDataUrl(leaderAvatar) : "",
     leaderIntro: String(data.get("leaderIntro") || "").trim(),
     summary: String(data.get("summary") || "").trim(),
     fileName: cloudFileName || file.name,
@@ -726,7 +776,7 @@ async function bootstrapCloudSync() {
       if (!cloudState) {
         await pushCloudState(true);
       }
-      setInterval(async () => {
+      const pullLatestCloudSnapshot = async () => {
         try {
           const latest = await pullCloudState();
           const latestTime = Number(latest?.updatedAt || 0);
@@ -745,7 +795,13 @@ async function bootstrapCloudSync() {
             }
           }
         } catch {}
-      }, 15000);
+      };
+
+      setInterval(pullLatestCloudSnapshot, 5000);
+      window.addEventListener("focus", pullLatestCloudSnapshot);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) pullLatestCloudSnapshot();
+      });
     }
   } catch {}
 }
